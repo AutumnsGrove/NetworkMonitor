@@ -92,7 +92,7 @@ class NetworkMonitorApp:
             asyncio.set_event_loop(loop)
 
             # Initialize daemon
-            self.daemon = NetworkDaemon(interval_seconds=5)
+            self.daemon = NetworkDaemon(sampling_interval=5)
 
             # Run daemon until shutdown
             async def run_daemon():
