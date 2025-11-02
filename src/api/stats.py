@@ -74,24 +74,60 @@ async def get_timeline_stats(
 
     since = datetime.now() - period_map[period]
 
+    # Determine bucket size based on period
+    bucket_sizes = {
+        "1h": timedelta(minutes=1),      # 60 buckets
+        "24h": timedelta(minutes=10),    # 144 buckets
+        "7d": timedelta(hours=1),        # 168 buckets
+        "30d": timedelta(hours=1),       # 720 buckets
+        "90d": timedelta(hours=2)        # 1080 buckets
+    }
+    bucket_size = bucket_sizes.get(period, timedelta(minutes=10))
+
     # Get samples
     samples = await get_samples_since(since)
 
-    # Format for timeline
-    timeline = []
+    # Aggregate samples into time buckets
+    buckets = {}
     for sample in samples:
-        timeline.append({
-            "timestamp": sample.timestamp.isoformat(),
-            "bytes_sent": sample.bytes_sent,
-            "bytes_received": sample.bytes_received,
-            "total_bytes": sample.bytes_sent + sample.bytes_received,
-            "packets": sample.packets_sent + sample.packets_received
-        })
+        # Round timestamp down to nearest bucket
+        bucket_time = sample.timestamp.replace(second=0, microsecond=0)
+
+        # Further round based on bucket size
+        if bucket_size >= timedelta(hours=1):
+            bucket_time = bucket_time.replace(minute=0)
+        elif bucket_size >= timedelta(minutes=10):
+            bucket_time = bucket_time.replace(minute=(bucket_time.minute // 10) * 10)
+
+        bucket_key = bucket_time.isoformat()
+
+        if bucket_key not in buckets:
+            buckets[bucket_key] = {
+                "timestamp": bucket_key,
+                "bytes_sent": 0,
+                "bytes_received": 0,
+                "packets_sent": 0,
+                "packets_received": 0
+            }
+
+        buckets[bucket_key]["bytes_sent"] += sample.bytes_sent
+        buckets[bucket_key]["bytes_received"] += sample.bytes_received
+        buckets[bucket_key]["packets_sent"] += sample.packets_sent
+        buckets[bucket_key]["packets_received"] += sample.packets_received
+
+    # Convert to sorted timeline
+    timeline = sorted(buckets.values(), key=lambda x: x["timestamp"])
+
+    # Add total_bytes field
+    for point in timeline:
+        point["total_bytes"] = point["bytes_sent"] + point["bytes_received"]
+        point["packets"] = point["packets_sent"] + point["packets_received"]
 
     return {
         "period": period,
         "since": since.isoformat(),
-        "granularity": granularity,
+        "granularity": f"{int(bucket_size.total_seconds() / 60)}min" if bucket_size < timedelta(hours=1) else f"{int(bucket_size.total_seconds() / 3600)}h",
+        "bucket_size_seconds": int(bucket_size.total_seconds()),
         "data_points": len(timeline),
         "timeline": timeline
     }
@@ -162,8 +198,8 @@ async def get_current_bandwidth():
     Returns:
         Current bandwidth in bytes/second and MB/s
     """
-    # Get samples from last 10 seconds
-    since = datetime.now() - timedelta(seconds=10)
+    # Get samples from last 15 seconds to ensure we have 2-3 complete sampling intervals
+    since = datetime.now() - timedelta(seconds=15)
     samples = await get_samples_since(since)
 
     if not samples:
@@ -174,13 +210,34 @@ async def get_current_bandwidth():
             "sample_count": 0
         }
 
-    # Calculate total bytes in the window
-    total_bytes = sum(
-        sample.bytes_sent + sample.bytes_received
-        for sample in samples
-    )
+    # Group samples by timestamp (all processes sampled at same time)
+    from collections import defaultdict
+    samples_by_time = defaultdict(list)
+    for sample in samples:
+        # Round to nearest second to group samples from same sampling run
+        time_key = sample.timestamp.replace(microsecond=0).isoformat()
+        samples_by_time[time_key].append(sample)
 
-    # Calculate bytes per second
+    # Get the 2 most recent sampling intervals (each is ~5s)
+    sorted_times = sorted(samples_by_time.keys(), reverse=True)[:2]
+
+    if not sorted_times:
+        return {
+            "bytes_per_second": 0,
+            "mbps": 0.0,
+            "time_window_seconds": 10,
+            "sample_count": 0
+        }
+
+    # Sum bytes from the 2 most recent intervals (covers ~10 seconds)
+    total_bytes = 0
+    sample_count = 0
+    for time_key in sorted_times:
+        for sample in samples_by_time[time_key]:
+            total_bytes += sample.bytes_sent + sample.bytes_received
+            sample_count += 1
+
+    # Each sample is a 5-second delta, and we have 2 intervals = 10 seconds
     time_window = 10  # seconds
     bytes_per_second = total_bytes / time_window
     mbps = bytes_per_second / (1024 * 1024)
@@ -189,5 +246,5 @@ async def get_current_bandwidth():
         "bytes_per_second": int(bytes_per_second),
         "mbps": round(mbps, 2),
         "time_window_seconds": time_window,
-        "sample_count": len(samples)
+        "sample_count": sample_count
     }

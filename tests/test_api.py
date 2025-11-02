@@ -118,7 +118,9 @@ async def test_stats_timeline_empty_database(async_test_client, temp_db):
 
     assert data["period"] == "24h"
     assert "since" in data
-    assert data["granularity"] == "auto"
+    assert data["granularity"] == "10min"  # 24h period uses 10-minute buckets
+    assert "bucket_size_seconds" in data
+    assert data["bucket_size_seconds"] == 600  # 10 minutes
     assert data["data_points"] == 0
     assert data["timeline"] == []
 
