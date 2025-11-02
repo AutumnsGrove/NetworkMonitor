@@ -1,0 +1,105 @@
+/* Network Monitor Dashboard Custom Styles */
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+    .container {
+        padding: 0.5rem !important;
+    }
+
+    .card {
+        margin-bottom: 1rem !important;
+    }
+
+    h1 {
+        font-size: 1.5rem !important;
+    }
+
+    h2 {
+        font-size: 1.25rem !important;
+    }
+
+    /* Stack navigation vertically on mobile */
+    .navbar-nav {
+        flex-direction: column !important;
+    }
+}
+
+/* Tablet optimizations */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .container {
+        padding: 1rem !important;
+    }
+}
+
+/* Loading spinner customization */
+._dash-loading {
+    margin: 2rem auto;
+    text-align: center;
+}
+
+/* Empty state styling */
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #6c757d;
+    font-size: 1.1rem;
+}
+
+.empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+/* Table responsive wrapper */
+.table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Chart responsiveness */
+.plotly-graph-div {
+    width: 100% !important;
+}
+
+/* Improve button spacing */
+.btn-group {
+    flex-wrap: wrap;
+}
+
+.btn-group .btn {
+    margin: 0.25rem;
+}
+
+/* Card hover effect */
+.card:hover {
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+    transition: box-shadow 0.3s ease;
+}
+
+/* Stat card animations */
+.stat-card {
+    transition: transform 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+}
+
+/* Better scrollbar styling */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}

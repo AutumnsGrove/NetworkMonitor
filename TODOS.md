@@ -1,209 +1,175 @@
 # NetworkMonitor - Implementation TODOs
 
-**Current Phase**: Phase 1 - Integration Testing & Validation
-**Status**: Backend Complete (Phases 1-3), Now Testing Before UI
+**Current Phase**: Phase 5 - Dashboard Visualizations (Plotly/Dash)
+**Status**: Backend Complete (Phases 1-4), 238 tests passing, 79% coverage
 
 ---
 
-## PHASE 1: Integration Testing & Validation ⏳
+## ✅ PHASE 1-4: COMPLETE
 
-### 1.1 Test Framework Setup
-- [ ] Add test dependencies to pyproject.toml (pytest-mock, httpx, pytest-cov)
-- [ ] Run `uv sync` to install dependencies
-- [ ] Create `tests/conftest.py` with shared fixtures
-- [ ] Create `tests/fixtures.py` with mock data
+**Phase 1**: Database Foundation ✅
+**Phase 2**: Network Capture Daemon ✅
+**Phase 3**: FastAPI Server & REST API ✅
+**Phase 4**: Integration Testing & Validation ✅
 
-### 1.2 Integration Test Suite
-- [ ] Use test-strategist to plan comprehensive test scenarios
-- [ ] Implement `tests/test_integration.py`
-  - [ ] Database initialization flow tests
-  - [ ] Daemon + Database integration tests (mocked lsof)
-  - [ ] API + Database integration tests
-  - [ ] Browser domain tracking flow tests
-  - [ ] Retention and aggregation tests
-
-### 1.3 API Endpoint Testing
-- [ ] Implement `tests/test_api.py`
-  - [ ] Stats endpoints (GET /api/stats, timeline, summary)
-  - [ ] Application endpoints (list, details, timeline)
-  - [ ] Domain endpoints (list, details, top domains)
-  - [ ] Browser endpoints (POST active-tab, status)
-  - [ ] Config endpoints (GET, PUT, init, validation)
-
-### 1.4 Component Testing
-- [ ] Implement `tests/test_process_mapper.py` (mock lsof, caching)
-- [ ] Implement `tests/test_daemon.py` (lifecycle, sampling, signals)
-- [ ] Expand `tests/test_utils.py` (time functions, path mgmt, validation)
-
-### 1.5 Test Execution & Bug Fixes
-- [ ] Run pytest with coverage reporting
-- [ ] Fix bugs discovered during testing
-- [ ] Achieve >70% test coverage
-- [ ] All tests passing
+**Test Coverage**: 238 tests passing, 79% coverage
+**Next**: Build Dashboard Visualizations
 
 ---
 
-## PHASE 2: Dashboard Visualizations (Plotly/Dash)
+## PHASE 5: Dashboard Visualizations (Plotly/Dash) ⏳
 
-### 2.1 Dashboard Architecture
-- [ ] Design Dash application structure (house-planner)
-- [ ] Plan page routing and layouts
-- [ ] Define reusable components
+### Day 1: Dashboard Infrastructure (house-coder)
+- [ ] Install Dash dependencies (`uv add dash dash-bootstrap-components`)
+- [ ] Create `src/dashboard/` module structure
+- [ ] Create `src/dashboard/__init__.py`
+- [ ] Create `src/dashboard/layouts.py` - Page layouts
+- [ ] Create `src/dashboard/callbacks.py` - Interactivity callbacks
+- [ ] Create `src/dashboard/components.py` - Reusable UI components
+- [ ] Create `src/dashboard/styles.py` - CSS styling
+- [ ] Create `src/dashboard.py` - Main Dash application
+- [ ] Integrate Dash app with FastAPI (WSGIMiddleware)
+- [ ] Set up base layout with navigation menu
+- [ ] Set up routing for 5 pages
+- [ ] Test: Visit http://localhost:7500/dashboard
 
-### 2.2 Core Dashboard Infrastructure
-- [ ] Create `src/dashboard.py` with Dash app setup
-- [ ] Integrate Dash with FastAPI server
-- [ ] Add base layout and navigation
+### Day 2: Overview Dashboard Page (house-coder)
+- [ ] Implement real-time gauge component (current bandwidth)
+- [ ] Implement timeline graph with time range selector (1h, 24h, 7d, 30d, 90d)
+- [ ] Implement pie charts (top 10 apps + top 10 domains)
+- [ ] Implement quick stats cards (6 stats)
+- [ ] Add auto-refresh callback (30 seconds interval)
+- [ ] Test: Verify gauge, timeline, pie charts, stats display correctly
 
-### 2.3 Page 1 - Overview Dashboard
-- [ ] Timeline graph (24h, 7d, 30d views)
-- [ ] Pie chart (application breakdown)
-- [ ] Real-time usage gauge
-- [ ] Top domains table
-- [ ] Quick stats cards
+### Day 3: Application Details Page (house-coder)
+- [ ] Implement sortable applications DataTable
+- [ ] Add search/filter functionality
+- [ ] Add pagination (25 per page)
+- [ ] Implement per-app timeline graph
+- [ ] Add multi-select for app comparison
+- [ ] Implement data breakdown charts (sent/received, packets)
+- [ ] Test: Verify table sorting, filtering, selection, timeline
 
-### 2.4 Page 2 - Application Details
-- [ ] Sortable application table
-- [ ] Per-app timeline graphs
-- [ ] Data sent/received breakdown
-- [ ] Process details display
+### Day 4: Domain Analysis Page (house-coder)
+- [ ] Implement domain hierarchy tree view
+- [ ] Implement top domains table with browser filtering
+- [ ] Add parent-only toggle
+- [ ] Implement domain timeline (stacked area chart)
+- [ ] Add browser breakdown visualization
+- [ ] Test: Verify tree, table, filters, timeline
 
-### 2.5 Page 3 - Domain Analysis
-- [ ] Browser-specific domain breakdown
-- [ ] Top domains visualization
-- [ ] Domain timeline tracking
-- [ ] Subdomain rollup display
+### Day 5: Historical Analysis Page (house-coder)
+- [ ] Implement hourly heatmap (7 rows × 24 columns)
+- [ ] Implement weekly trends comparison chart
+- [ ] Implement monthly comparison bar chart
+- [ ] Add date range picker with presets
+- [ ] Connect all charts to date range updates
+- [ ] Test: Verify heatmap, trends, date range updates
 
-### 2.6 Page 4 - Historical Analysis
-- [ ] Hourly heatmap (day × hour)
-- [ ] Weekly trends graph
-- [ ] Monthly comparisons
-- [ ] Customizable date range selector
+### Day 6: Configuration Page (house-coder)
+- [ ] Implement system status display (daemon, DB size, uptime)
+- [ ] Implement settings form (sliders, inputs, dropdowns)
+- [ ] Add form validation
+- [ ] Implement manual operation buttons (aggregation, cleanup, export)
+- [ ] Add success/error notifications
+- [ ] Test: Verify status display, form saves, operations trigger
 
-### 2.7 Page 5 - Configuration
-- [ ] Sampling interval controls
-- [ ] Data retention policy settings
-- [ ] Log level configuration
-- [ ] System status display
+### Day 7: Dashboard Testing & Polish (test-strategist → house-coder)
+- [ ] Add responsive CSS for mobile/tablet
+- [ ] Improve loading states
+- [ ] Add error handling for API failures
+- [ ] Test all interactivity
+- [ ] Write `tests/test_dashboard.py`
+- [ ] Test: Full user journey, mobile responsiveness, errors
 
 ---
 
-## PHASE 3: MenuBar Application (rumps)
+## PHASE 6: MenuBar Application (rumps)
 
-### 3.1 MenuBar Design
-- [ ] Design menu structure and status icons (house-planner)
-- [ ] Plan daemon communication strategy
+### Day 8: MenuBar Core (house-coder)
+- [ ] Create `src/menubar.py` with rumps integration
+- [ ] Add status icon (idle/low/medium/high states)
+- [ ] Implement dropdown menu items
+- [ ] Add current usage display (today's total)
+- [ ] Test: Verify menubar appears, menu items work
 
-### 3.2 MenuBar Implementation
-- [ ] Create `src/menubar.py` with rumps
-- [ ] Add status icon with activity indicator
-- [ ] Implement dropdown menu (stats, open dashboard, pause/resume, quit)
-- [ ] Add notification support for high usage
+### Day 9: MenuBar Integration & Testing (house-coder)
+- [ ] Connect to daemon status API
+- [ ] Implement "Open Dashboard" (browser launch)
+- [ ] Implement pause/resume monitoring
+- [ ] Add optional high-usage notifications
+- [ ] Test: Verify integration with daemon, dashboard launch
 
 ---
 
-## PHASE 4: Browser Extension (Zen Browser)
+## PHASE 7: Browser Extension (Zen Browser)
 
-### 4.1 Extension Architecture
-- [ ] Design WebExtension structure (house-planner)
-- [ ] Plan API communication protocol
-
-### 4.2 Extension Implementation
+### Day 10: Extension Core (house-coder)
 - [ ] Create `extension/` directory
-- [ ] Implement `manifest.json` for Zen browser
-- [ ] Create `background.js` for active tab tracking
-- [ ] Add API communication to localhost:7500
-- [ ] Write installation instructions
+- [ ] Create `manifest.json` (WebExtension v3)
+- [ ] Create `background.js` (active tab tracking)
+- [ ] Implement API communication to localhost:7500
+- [ ] Test: Extension loads in Zen browser
+
+### Day 11: Extension Testing & Packaging (house-coder)
+- [ ] Add tab change detection and reporting
+- [ ] Add error handling (API offline scenarios)
+- [ ] Package extension for Zen
+- [ ] Write installation guide
+- [ ] Test: Tab tracking works, reports to API
 
 ---
 
-## PHASE 5: Configuration & Lifecycle Management
+## PHASE 8: Main Entry Point & Integration
 
-### 5.1 Logging Configuration
-- [ ] Create `src/logging_config.py`
-- [ ] Set up log rotation (daemon.log, webserver.log)
-- [ ] Add log level management
+### Day 12: Unified Entry Point (house-planner → house-coder)
+- [ ] Plan single-process architecture (house-planner)
+- [ ] Create `main.py` orchestrator
+- [ ] Implement daemon + webserver + menubar coordination
+- [ ] Add graceful shutdown handling (SIGTERM/SIGINT)
+- [ ] Add threading/async coordination
+- [ ] Test: Single command starts everything
 
-### 5.2 Config Initialization
-- [ ] Ensure `~/.netmonitor/config.json` created on first run
-- [ ] Add config validation and migration
-- [ ] Update config API to handle file creation
-
-### 5.3 LaunchAgent Setup
-- [ ] Create `com.networkmonitor.daemon.plist` template
-- [ ] Add installation script
-- [ ] Document auto-start setup
-
----
-
-## PHASE 6: Main Entry Point & Integration
-
-### 6.1 Main Architecture Design
-- [ ] Design single-process architecture (house-planner)
-- [ ] Plan daemon + webserver + menubar coordination
-- [ ] Define startup/shutdown sequences
-
-### 6.2 Main Implementation
-- [ ] Create `main.py` as unified entry point
-- [ ] Orchestrate daemon, webserver, dashboard, menubar
-- [ ] Add graceful shutdown handlers (SIGTERM/SIGINT)
-- [ ] Implement health checks
-
-### 6.3 Error Handling & Recovery
-- [ ] Add comprehensive error handling
-- [ ] Implement crash recovery
-- [ ] Add restart logic for failed components
-
-### 6.4 Final Integration Tests
-- [ ] End-to-end testing of complete application
-- [ ] Long-running stability tests (24+ hours)
-- [ ] Resource usage validation
+### Day 13: LaunchAgent & Auto-Start (house-coder)
+- [ ] Create LaunchAgent plist file
+- [ ] Create installation script for ~/Library/LaunchAgents/
+- [ ] Add startup verification and health checks
+- [ ] Create uninstall script
+- [ ] Test: Auto-start on macOS login works
 
 ---
 
-## PHASE 7: Documentation & Security
+## PHASE 9: Polish & Documentation
 
-### 7.1 Documentation Update
-- [ ] Update README.md with installation instructions
-- [ ] Document configuration options
-- [ ] Add troubleshooting guide
-- [ ] Create user guide for dashboard
+### Day 14: Final Testing & Optimization (test-strategist → security-auditor → house-coder)
+- [ ] End-to-end user journey testing
+- [ ] Security audit (localhost-only, file permissions)
+- [ ] Performance testing (24h+ stability run)
+- [ ] Memory/CPU profiling
+- [ ] Fix any discovered issues
+- [ ] Test: Production-ready verification
 
-### 7.2 Security Audit
-- [ ] Review authentication (localhost-only binding)
-- [ ] Check file permissions (database 600)
-- [ ] Validate no secrets in code
-- [ ] Review error messages for information leakage
-
-### 7.3 Final Review & Commit
-- [ ] Review all changes across phases
-- [ ] Prepare comprehensive commit messages
-- [ ] Update SO_FAR.md with final status
-- [ ] Tag release version 0.1.0
+### Day 15: Documentation & Release (house-coder if requested)
+- [ ] Update README.md with setup instructions (if requested)
+- [ ] Create user guide with screenshots (if requested)
+- [ ] Create troubleshooting guide (if requested)
+- [ ] Update NEXT_STEPS.md → COMPLETED.md
+- [ ] Final git commit with comprehensive message
 
 ---
 
 ## Success Criteria
 
-**Phase 1 Complete When:**
-- ✅ All integration tests pass
-- ✅ All API endpoint tests pass
-- ✅ All component tests pass
-- ✅ Test coverage >70%
-- ✅ Manual curl tests succeed
-- ✅ All critical bugs fixed
+**Phase 5 Complete:** 5 dashboard pages functional, responsive, tested
+**Phase 6 Complete:** MenuBar app shows status, opens dashboard, controls daemon
+**Phase 7 Complete:** Extension tracks Zen browser tabs, reports to API
+**Phase 8 Complete:** Single command starts entire system, auto-starts on login
+**Phase 9 Complete:** Security audited, 24h+ stable, documentation complete (if requested)
 
-**Full Project Complete When:**
-- ✅ All tests pass (>70% coverage)
-- ✅ Dashboard displays live data
-- ✅ MenuBar app launches and controls daemon
-- ✅ Browser extension tracks domains
-- ✅ Auto-starts on macOS boot
-- ✅ Runs stably for 24+ hours
-- ✅ Documentation complete
-- ✅ Security audit passed
+**Total Timeline:** 15 days (3 weeks at part-time pace)
+**Total Tests Expected:** ~290 tests
+**Final Coverage Target:** >80%
 
 ---
 
-**Estimated Timeline**: 15-22 sessions
-**Agent Strategy**: Extensive use of house-coder, house-planner, test-strategist, bash-executor
+**Agent Strategy**: Extensive use of house-coder (primary), test-strategist, house-planner, security-auditor

@@ -10,6 +10,7 @@ from typing import Optional
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.wsgi import WSGIMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
 
@@ -105,6 +106,12 @@ app.include_router(applications.router, prefix="/api", tags=["applications"])
 app.include_router(domains.router, prefix="/api", tags=["domains"])
 app.include_router(browser.router, prefix="/api", tags=["browser"])
 app.include_router(config_routes.router, prefix="/api", tags=["config"])
+
+
+# Import and mount Dash dashboard
+from src.dash_app import app as dash_app
+
+app.mount("/dashboard", WSGIMiddleware(dash_app.server))
 
 
 def run_server(
