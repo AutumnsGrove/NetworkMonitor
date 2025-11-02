@@ -193,6 +193,7 @@ class DomainUsageStats(BaseModel):
     total_bytes: int = 0
     first_seen: datetime
     last_seen: datetime
+    browser: Optional[str] = None  # Primary browser/app accessing this domain
 
 
 class TimeSeriesPoint(BaseModel):

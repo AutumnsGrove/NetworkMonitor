@@ -13,6 +13,7 @@ from src.db_queries import get_config, set_config
 from src.utils import get_config_path, is_valid_port, is_valid_interval, is_valid_retention_days
 from src.daemon import get_daemon
 from src.config_manager import get_config_manager
+from src.retention import aggregate_all_pending, cleanup_all_old_data
 
 
 router = APIRouter()
@@ -214,3 +215,191 @@ async def get_all_config_values():
         "config": config_with_sources,
         "config_file": str(config_mgr._get_config_path())
     }
+
+
+@router.post("/config/aggregate")
+async def trigger_aggregation():
+    """
+    Manually trigger data aggregation.
+
+    Aggregates raw samples into hourly data and hourly data into daily aggregates.
+
+    Returns:
+        Dictionary with counts of aggregates created
+    """
+    try:
+        result = await aggregate_all_pending()
+
+        return {
+            "status": "success",
+            "message": "Aggregation completed",
+            "hourly_aggregates": result.get('hourly_aggregates', 0),
+            "daily_aggregates": result.get('daily_aggregates', 0)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Aggregation failed: {str(e)}")
+
+
+@router.post("/config/cleanup")
+async def trigger_cleanup():
+    """
+    Manually trigger cleanup of old data based on retention policies.
+
+    Removes raw samples and hourly aggregates older than configured retention periods.
+
+    Returns:
+        Dictionary with counts of records deleted
+    """
+    try:
+        # Get retention policies from config
+        raw_retention_str = await get_config('data_retention_days_raw')
+        hourly_retention_str = await get_config('data_retention_days_hourly')
+
+        raw_retention = int(raw_retention_str) if raw_retention_str else 7
+        hourly_retention = int(hourly_retention_str) if hourly_retention_str else 90
+
+        result = await cleanup_all_old_data(raw_retention, hourly_retention)
+
+        return {
+            "status": "success",
+            "message": f"Cleanup completed: {result['deleted_samples']} samples, {result['deleted_hourly']} hourly aggregates deleted",
+            "deleted_samples": result.get('deleted_samples', 0),
+            "deleted_hourly": result.get('deleted_hourly', 0)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Cleanup failed: {str(e)}")
+
+
+@router.post("/config/refresh-cache")
+async def refresh_cache():
+    """
+    Clear internal caches (process mapper, domain cache, app cache).
+
+    Forces the system to rebuild caches from fresh data.
+
+    Returns:
+        Dictionary with cache clear status
+    """
+    try:
+        daemon = get_daemon()
+
+        if not daemon:
+            raise HTTPException(status_code=503, detail="Daemon not running")
+
+        # Clear daemon caches
+        daemon.app_id_cache.clear()
+        daemon.domain_id_cache.clear()
+
+        # Clear process mapper cache
+        if hasattr(daemon, 'process_mapper') and daemon.process_mapper:
+            daemon.process_mapper.clear_cache()
+
+        return {
+            "status": "success",
+            "message": "All caches cleared successfully",
+            "caches_cleared": ["app_id_cache", "domain_id_cache", "process_mapper_cache"]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Cache refresh failed: {str(e)}")
+
+
+@router.get("/export")
+async def export_data(
+    format: str = "csv",
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None
+):
+    """
+    Export database data to CSV or JSON format.
+
+    Args:
+        format: Export format - 'csv' or 'json' (default: csv)
+        start_date: Optional start date (ISO format: YYYY-MM-DD)
+        end_date: Optional end date (ISO format: YYYY-MM-DD)
+
+    Returns:
+        Exported data in requested format
+    """
+    try:
+        import csv
+        from io import StringIO
+        from datetime import datetime
+        from src.db_queries import get_db
+
+        # Validate format
+        if format not in ["csv", "json"]:
+            raise HTTPException(status_code=400, detail="Format must be 'csv' or 'json'")
+
+        # Parse dates if provided
+        where_clause = ""
+        params = []
+
+        if start_date or end_date:
+            conditions = []
+            if start_date:
+                try:
+                    datetime.fromisoformat(start_date)
+                    conditions.append("timestamp >= ?")
+                    params.append(start_date)
+                except ValueError:
+                    raise HTTPException(status_code=400, detail="Invalid start_date format. Use YYYY-MM-DD")
+
+            if end_date:
+                try:
+                    datetime.fromisoformat(end_date)
+                    conditions.append("timestamp <= ?")
+                    params.append(end_date)
+                except ValueError:
+                    raise HTTPException(status_code=400, detail="Invalid end_date format. Use YYYY-MM-DD")
+
+            where_clause = " WHERE " + " AND ".join(conditions)
+
+        # Query data from hourly_aggregates (more manageable than raw samples)
+        async with get_db() as db:
+            query = f"""
+                SELECT
+                    h.timestamp,
+                    a.name as application,
+                    d.domain,
+                    h.bytes_sent,
+                    h.bytes_received,
+                    (h.bytes_sent + h.bytes_received) as total_bytes
+                FROM hourly_aggregates h
+                LEFT JOIN applications a ON h.app_id = a.id
+                LEFT JOIN domains d ON h.domain_id = d.id
+                {where_clause}
+                ORDER BY h.timestamp DESC
+                LIMIT 10000
+            """
+
+            cursor = await db.execute(query, params)
+            rows = await cursor.fetchall()
+            columns = [desc[0] for desc in cursor.description]
+
+        if format == "csv":
+            # Create CSV
+            output = StringIO()
+            writer = csv.writer(output)
+            writer.writerow(columns)
+            writer.writerows(rows)
+
+            return {
+                "format": "csv",
+                "data": output.getvalue(),
+                "rows": len(rows)
+            }
+        else:
+            # Create JSON
+            data = [dict(zip(columns, row)) for row in rows]
+            return {
+                "format": "json",
+                "data": data,
+                "rows": len(rows)
+            }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")

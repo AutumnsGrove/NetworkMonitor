@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Optional
 
 from src.db_queries import (
-    get_domain_usage_stats, get_domain
+    get_domain_usage_stats, get_domain, get_db
 )
 from src.utils import format_bytes
 
@@ -49,6 +49,7 @@ async def list_domains(
             "domain_id": domain.domain_id,
             "domain": domain.domain,
             "parent_domain": domain.parent_domain,
+            "browser": domain.browser,
             "total_bytes": domain.total_bytes,
             "total_formatted": format_bytes(domain.total_bytes),
             "bytes_sent": domain.total_bytes_sent,
@@ -149,4 +150,96 @@ async def get_top_domains(
         "period": period,
         "limit": limit,
         "top_domains": result
+    }
+
+
+@router.get("/domains/{domain_id}/timeline")
+async def get_domain_timeline(
+    domain_id: int,
+    period: str = Query("week", description="Time period: day, week, month"),
+    granularity: str = Query("hourly", description="Data granularity: hourly, daily")
+):
+    """
+    Get usage timeline for a specific domain.
+
+    Shows hourly or daily usage data over the specified time period.
+
+    Args:
+        domain_id: Domain ID
+        period: Time period to show (day, week, month)
+        granularity: Data granularity (hourly, daily)
+
+    Returns:
+        Time series data for domain usage
+    """
+    from src.utils import get_time_ranges
+
+    # Verify domain exists
+    domain = await get_domain(domain_id)
+    if not domain:
+        raise HTTPException(status_code=404, detail="Domain not found")
+
+    # Get time range
+    time_ranges = get_time_ranges()
+    period_map = {
+        "day": time_ranges['today'],
+        "week": time_ranges['this_week'],
+        "month": time_ranges['this_month']
+    }
+
+    since = period_map.get(period)
+    if not since:
+        raise HTTPException(status_code=400, detail=f"Invalid period: {period}")
+
+    # Query based on granularity
+    async with get_db() as db:
+        if granularity == "hourly":
+            query = """
+                SELECT
+                    timestamp,
+                    bytes_sent,
+                    bytes_received,
+                    (bytes_sent + bytes_received) as total_bytes
+                FROM hourly_aggregates
+                WHERE domain_id = ?
+                    AND timestamp >= ?
+                ORDER BY timestamp ASC
+            """
+        elif granularity == "daily":
+            query = """
+                SELECT
+                    timestamp,
+                    bytes_sent,
+                    bytes_received,
+                    (bytes_sent + bytes_received) as total_bytes
+                FROM daily_aggregates
+                WHERE domain_id = ?
+                    AND timestamp >= ?
+                ORDER BY timestamp ASC
+            """
+        else:
+            raise HTTPException(status_code=400, detail=f"Invalid granularity: {granularity}")
+
+        cursor = await db.execute(query, (domain_id, since.isoformat()))
+        rows = await cursor.fetchall()
+
+    # Format response
+    timeline = []
+    for row in rows:
+        timeline.append({
+            "timestamp": row[0],
+            "bytes_sent": row[1],
+            "bytes_received": row[2],
+            "total_bytes": row[3],
+            "total_formatted": format_bytes(row[3])
+        })
+
+    return {
+        "domain_id": domain_id,
+        "domain": domain.domain,
+        "period": period,
+        "granularity": granularity,
+        "since": since.isoformat(),
+        "data_points": len(timeline),
+        "timeline": timeline
     }

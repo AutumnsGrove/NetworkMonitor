@@ -477,7 +477,16 @@ async def get_domain_usage_stats(since: Optional[datetime] = None, limit: int = 
                 COALESCE(SUM(bds.bytes_received), 0) as total_bytes_received,
                 COALESCE(SUM(bds.bytes_sent + bds.bytes_received), 0) as total_bytes,
                 d.first_seen,
-                d.last_seen
+                d.last_seen,
+                (
+                    SELECT a.process_name
+                    FROM browser_domain_samples bds2
+                    JOIN applications a ON bds2.app_id = a.app_id
+                    WHERE bds2.domain_id = d.domain_id
+                    GROUP BY bds2.app_id
+                    ORDER BY SUM(bds2.bytes_sent + bds2.bytes_received) DESC
+                    LIMIT 1
+                ) as browser
             FROM domains d
             LEFT JOIN browser_domain_samples bds ON d.domain_id = bds.domain_id
             WHERE 1=1 {since_clause}

@@ -1,83 +1,55 @@
 # Network Monitor - Next Steps & TODOs
 
-## 🚨 High Priority - Manual Operations Not Working
+## ✅ High Priority - Manual Operations (COMPLETED)
 
-All manual operation buttons on the Config page currently show "Not Implemented" alerts:
+All manual operation buttons on the Config page are now implemented:
 
-### 1. Run Aggregation Now
-**Location:** Config page → Manual Operations
-**Issue:** `POST /api/config/aggregate` endpoint doesn't exist
-**Code:** `src/dashboard/callbacks.py:1312-1316`
-**What it should do:** Manually trigger data aggregation (hourly/daily)
-**Implementation needed:**
-- Create API endpoint in `src/api/config.py`
-- Call `RetentionScheduler.run_aggregation()` manually
-- Return success/failure status
+### 1. Run Aggregation Now ✅
+**Status:** IMPLEMENTED
+**Endpoint:** `POST /api/config/aggregate`
+**Location:** `src/api/config.py:220-240`
+**Functionality:** Manually triggers data aggregation using `aggregate_all_pending()` from retention module
 
-### 2. Cleanup Old Data
-**Location:** Config page → Manual Operations
-**Issue:** `POST /api/config/cleanup` endpoint doesn't exist
-**Code:** `src/dashboard/callbacks.py:1345-1349`
-**What it should do:** Manually trigger cleanup of old data based on retention policies
-**Implementation needed:**
-- Create API endpoint in `src/api/config.py`
-- Call `RetentionScheduler.run_cleanup()` manually
-- Return rows deleted count
+### 2. Cleanup Old Data ✅
+**Status:** IMPLEMENTED
+**Endpoint:** `POST /api/config/cleanup`
+**Location:** `src/api/config.py:243-270`
+**Functionality:** Manually triggers cleanup using `cleanup_all_old_data()` with configured retention policies
 
-### 3. Refresh Cache
-**Location:** Config page → Manual Operations
-**Issue:** `POST /api/config/refresh-cache` endpoint doesn't exist
-**Code:** `src/dashboard/callbacks.py:1378-1382`
-**What it should do:** Clear internal caches (process mapper, domain cache, etc.)
-**Implementation needed:**
-- Create API endpoint in `src/api/config.py`
-- Clear process mapper cache
-- Clear domain ID cache
-- Clear app ID cache
+### 3. Refresh Cache ✅
+**Status:** IMPLEMENTED
+**Endpoint:** `POST /api/config/refresh-cache`
+**Location:** `src/api/config.py:273-305`
+**Functionality:** Clears all internal caches (app_id_cache, domain_id_cache, process_mapper_cache)
 
-### 4. Export Data
-**Location:** Config page → Manual Operations
-**Issue:** `GET /api/export` endpoint doesn't exist
-**Code:** `src/dashboard/callbacks.py:1411-1415`
-**What it should do:** Export database to CSV/JSON format
-**Implementation needed:**
-- Create API endpoint that returns CSV/JSON
-- Use Dash's `dcc.Download` component
-- Allow selection of date range
+### 4. Export Data ✅
+**Status:** IMPLEMENTED
+**Endpoint:** `GET /api/export`
+**Location:** `src/api/config.py:308-405`
+**Functionality:** Exports hourly aggregates to CSV or JSON format with optional date range filtering
 
 ---
 
 ## 📊 Medium Priority - Dashboard Features
 
-### 5. Domain Timeline Not Implemented
-**Location:** Domains page → Domain detail view
-**Issue:** `GET /api/domains/{domain_id}/timeline` endpoint doesn't exist
-**Code:** `src/dashboard/callbacks.py:747`
-**What it should do:** Show hourly/daily usage timeline for specific domain
-**Implementation needed:**
-- Create API endpoint in `src/api/domains.py`
-- Query hourly_aggregates table for domain
-- Return time series data
+### 5. Domain Timeline ✅
+**Status:** IMPLEMENTED
+**Endpoint:** `GET /api/domains/{domain_id}/timeline`
+**Location:** `src/api/domains.py:155-244`
+**Functionality:** Returns hourly or daily usage timeline for specific domain with configurable time periods (day/week/month)
 
 ### 6. Per-Browser Stats for Domains
-**Location:** Domains page → Browser breakdown
-**Issue:** No database schema for per-browser domain stats
-**Code:** `src/dashboard/callbacks.py:808-815`
-**What it should do:** Show which browsers accessed each domain
-**Implementation needed:**
-- Possibly already tracked in `browser_domain_samples` table?
-- Create API endpoint to aggregate by browser
-- Update dashboard callback to use real data
+**Status:** PARTIALLY IMPLEMENTED
+**Note:** The `browser_domain_samples` table already tracks per-browser domain stats. A new endpoint could aggregate this data further if needed.
+**Suggestion:** Use the timeline endpoint with app_id filtering or create a new endpoint `/api/domains/{domain_id}/browsers` for detailed browser breakdown
 
-### 7. Browser Field Missing in Domain API
-**Location:** Domains page → Application column
-**Issue:** API doesn't return browser info for domains
-**Code:** `src/dashboard/callbacks.py:646`
-**What it should do:** Show which browser/app accessed the domain
-**Implementation needed:**
-- Update `GET /api/domains` endpoint
-- Join with `browser_domain_samples` or applications table
-- Return browser name in response
+### 7. Browser Field in Domain API ✅
+**Status:** IMPLEMENTED
+**Location:** `src/api/domains.py:52` (response), `src/db_queries.py:481-489` (query)
+**Functionality:**
+- Added `browser` field to `DomainUsageStats` model
+- Updated `get_domain_usage_stats()` to return primary browser (by traffic volume) for each domain
+- API now returns browser/app name that accessed the domain
 
 ---
 
