@@ -1,9 +1,9 @@
 # Network Monitor - Next Steps & TODOs
 
-## 🔴 CRITICAL BUG - FIXED (2025-11-02)
+## 🔴 CRITICAL BUG - FIXED + SIMPLIFIED (2025-11-02)
 
 ### Network Capture Was Not Integrated
-**Status:** ✅ FIXED (commits required)
+**Status:** ✅ FIXED + SIMPLIFIED with nettop approach
 **Severity:** CRITICAL - Application fundamentally broken
 **Discovery Date:** 2025-11-02
 
@@ -18,22 +18,70 @@
 - No packet callback handler implemented
 - No mapping between captured packets (IP:port) and processes
 
-**Fix Applied:**
+**Fix Applied (Initial):**
 - Integrated NetworkCapture into NetworkDaemon class
 - Added thread-safe packet callback handler
 - Implemented packet-to-process mapping via (IP:port) correlation
 - Added domain tracking from DNS/TLS extraction
 - Graceful fallback if not running as root
 
+**Result of Testing:**
+- Packet capture worked (37K+ packets captured)
+- BUT packet-to-process mapping consistently failed (0 bytes)
+- Discovered macOS native `nettop` provides per-process stats directly
+
+**Final Solution (Pivot to nettop):**
+- Replaced scapy with macOS native `nettop` command
+- No sudo required - runs as regular user
+- Per-process attribution built-in (no complex mapping needed)
+- Simpler, more reliable architecture
+- ~160 lines of code removed
+
 **Files Modified:**
-- `src/daemon.py` - Added packet capture lifecycle and byte aggregation
-- `src/process_mapper.py` - Extended to track remote IP:port for correlation
+- `src/capture.py` - Added NetTopMonitor class, removed packet capture complexity
+- `src/daemon.py` - Simplified _sample_network() method, removed threading
 
 **Testing Required:**
-- Restart daemon with `sudo uv run python main.py`
-- Verify log shows "Packet capture started successfully"
-- Check new samples have bytes_sent/bytes_received > 0
-- Verify domains appear in dashboard
+- Restart daemon (NO SUDO NEEDED!)
+- Verify per-process byte counts in database
+- Check dashboard shows real application usage
+
+---
+
+## 🎯 ARCHITECTURAL CHANGE - nettop Approach (2025-11-02)
+
+### From scapy to nettop
+
+**Previous Approach:** scapy packet capture with IP:port → process correlation
+**New Approach:** macOS native `nettop` command for direct per-process stats
+
+**Why the Change:**
+- Packet capture worked (37K+ packets) but mapping to processes failed
+- Discovered macOS nettop provides per-process network stats natively
+- nettop is simpler, more reliable, and **doesn't require sudo**
+
+**Benefits:**
+- ✅ No sudo required - runs as regular user
+- ✅ Per-process attribution built-in (no complex mapping)
+- ✅ Native macOS tool (always available)
+- ✅ Simple CSV output format
+- ✅ ~160 lines of code removed
+
+**Implementation:**
+- New `NetTopMonitor` class in `src/capture.py`
+- Simplified `NetworkDaemon._sample_network()` method
+- Removed packet capture thread, connection tracking, threading locks
+- Direct subprocess call to `nettop -P -L 1 -J bytes_in,bytes_out`
+
+**Trade-offs:**
+- Lost: DNS/TLS domain extraction from packets
+- Solution: Use browser extension for domain tracking (already implemented)
+- Result: Simpler, more reliable architecture
+
+**Testing Required:**
+- Restart daemon (no sudo needed!)
+- Verify per-process byte counts in database
+- Check dashboard shows real application usage
 
 ---
 

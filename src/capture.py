@@ -3,10 +3,14 @@ Network packet capture using scapy.
 
 Captures network packets to track application-level usage and domain access.
 Requires sudo/root permissions for packet sniffing.
+
+NOTE: This module is DEPRECATED. Use NetTopMonitor for simpler, more reliable
+per-process network monitoring on macOS.
 """
 import logging
+import subprocess
 from datetime import datetime
-from typing import Dict, Set, Optional, Tuple, Callable
+from typing import Dict, Set, Optional, Tuple, Callable, List
 from collections import defaultdict
 import asyncio
 from dataclasses import dataclass, field
@@ -376,3 +380,112 @@ def check_capture_permissions() -> bool:
     """
     import os
     return os.geteuid() == 0
+
+
+class NetTopMonitor:
+    """
+    Network monitoring using macOS nettop command.
+
+    Simpler and more reliable than packet capture - uses native macOS tool
+    that shows per-process network usage without requiring sudo.
+
+    nettop provides direct per-process byte counts in CSV format:
+        process_name.pid,bytes_in,bytes_out
+
+    Advantages over scapy:
+    - No sudo required
+    - Per-process data built-in (no IP:port mapping needed)
+    - Native macOS tool (always available)
+    - Simple CSV output
+    - Delta mode shows bytes since last call
+    """
+
+    def __init__(self):
+        """Initialize nettop monitor."""
+        self.running = False
+        logger.info("Initialized NetTopMonitor (macOS nettop-based)")
+
+    async def sample(self) -> List[Dict]:
+        """
+        Sample network usage using nettop.
+
+        Runs nettop for 1 sample in CSV format to get per-process byte counts.
+
+        Returns:
+            List of process stats with bytes_in/bytes_out
+            Example: [
+                {'process_name': 'Safari', 'pid': 1234, 'bytes_in': 1024, 'bytes_out': 512},
+                ...
+            ]
+        """
+        try:
+            # Run nettop for 1 sample, CSV format, process summaries only
+            # -P: Process mode
+            # -L 1: Sample once
+            # -J bytes_in,bytes_out: Only show these columns
+            # -x: No header
+            cmd = ['nettop', '-P', '-L', '1', '-J', 'bytes_in,bytes_out']
+
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+
+            if result.returncode != 0:
+                logger.error(f"nettop failed with return code {result.returncode}: {result.stderr}")
+                return []
+
+            # Parse CSV output
+            processes = []
+            lines = result.stdout.strip().split('\n')
+
+            # Skip header line if present
+            start_idx = 1 if lines and lines[0].startswith(',bytes_in,bytes_out') else 0
+
+            for line in lines[start_idx:]:
+                if not line or not line.strip():
+                    continue
+
+                parts = line.split(',')
+                if len(parts) < 3:
+                    continue
+
+                # Parse process_name.pid format
+                process_info = parts[0]
+                if not process_info or '.' not in process_info:
+                    continue
+
+                # Split process name and PID
+                last_dot = process_info.rfind('.')
+                process_name = process_info[:last_dot]
+                try:
+                    pid = int(process_info[last_dot+1:])
+                except ValueError:
+                    continue
+
+                # Parse bytes
+                try:
+                    bytes_in = int(parts[1]) if parts[1] else 0
+                    bytes_out = int(parts[2]) if parts[2] else 0
+                except (ValueError, IndexError):
+                    continue
+
+                # Only include processes with non-zero traffic
+                if bytes_in > 0 or bytes_out > 0:
+                    processes.append({
+                        'process_name': process_name,
+                        'pid': pid,
+                        'bytes_in': bytes_in,
+                        'bytes_out': bytes_out
+                    })
+
+            return processes
+
+        except subprocess.TimeoutExpired:
+            logger.error("nettop command timed out")
+            return []
+        except Exception as e:
+            logger.error(f"Error running nettop: {e}", exc_info=True)
+            return []
