@@ -14,8 +14,6 @@ from src.dashboard.layouts import (
     history_layout,
     config_layout,
 )
-# Import callbacks to register them
-from src.dashboard import callbacks
 
 
 # Initialize Dash app with Bootstrap theme
@@ -77,6 +75,9 @@ def display_page(pathname):
             dbc.Button("Go to Overview", href="/dashboard/", color="primary"),
         ])
 
+
+# Import and register callbacks AFTER app is created
+from src.dashboard import callbacks
 
 # Server instance for WSGI integration with FastAPI
 server = app.server

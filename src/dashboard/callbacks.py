@@ -69,13 +69,13 @@ def update_stats_cards(n):
     month = stats.get("this_month", {})
     current = stats.get("current", {})
 
-    # Get top app name
+    # Get top app name (API returns string or None, not dict)
     top_app = today.get("top_app")
-    top_app_name = top_app.get("name", "N/A") if top_app else "N/A"
+    top_app_name = top_app if top_app else "N/A"
 
-    # Get top domain name
+    # Get top domain name (API returns string or None, not dict)
     top_domain = today.get("top_domain")
-    top_domain_name = top_domain.get("domain", "N/A") if top_domain else "N/A"
+    top_domain_name = top_domain if top_domain else "N/A"
 
     # Get active connections count
     active_count = current.get("active_connections", 0)
