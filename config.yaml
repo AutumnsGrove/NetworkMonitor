@@ -1,0 +1,56 @@
+# Network Monitor Configuration File
+# This file contains all configurable settings for the Network Monitor application.
+# Values can be overridden via the web dashboard (saved to database).
+
+# Daemon Settings
+daemon:
+  sampling_interval_seconds: 1          # How often to sample network traffic (1-60)
+  enable_retention: true                # Enable automatic data aggregation and cleanup
+
+# Web Server Settings
+server:
+  port: 7500                            # FastAPI server port
+  host: "localhost"                     # Server host (use localhost for privacy)
+
+# Data Retention Policies
+retention:
+  raw_samples_days: 7                   # Keep raw network samples for N days
+  hourly_aggregates_days: 90            # Keep hourly aggregated data for N days
+  aggregation_interval_seconds: 300     # How often to aggregate data (5 minutes)
+  cleanup_interval_seconds: 3600        # How often to run cleanup job (1 hour)
+
+# MenuBar Settings
+menubar:
+  refresh_interval_seconds: 30          # Stats refresh interval in menubar
+  high_usage_threshold_mb: 50           # Alert threshold in MB/s
+  notification_cooldown_seconds: 300    # Min time between alerts (5 minutes)
+
+# Dashboard Settings
+dashboard:
+  overview_refresh_ms: 30000            # Overview page refresh interval (30 seconds)
+  config_refresh_ms: 10000              # Config page refresh interval (10 seconds)
+
+# API Settings
+api:
+  default_timeout_seconds: 3            # Default API request timeout
+
+# Process Mapper Settings
+process_mapper:
+  lsof_timeout_seconds: 5               # Timeout for lsof commands
+  ps_timeout_seconds: 2                 # Timeout for ps commands
+  bundle_timeout_seconds: 1             # Timeout for bundle ID lookups
+
+# Logging
+logging:
+  level: "INFO"                         # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  max_file_size_mb: 10                  # Max log file size before rotation
+  backup_count: 5                       # Number of backup log files to keep
+
+# Browser Extension
+extension:
+  enabled: true                         # Enable browser extension support
+
+# Notifications
+notifications:
+  enabled: false                        # Enable desktop notifications
+  high_usage_enabled: true              # Alert on high usage detection

@@ -22,11 +22,11 @@ Wait 5-10 seconds for everything to initialize.
 ## ⚙️ Step 2: Configuration File
 
 ### Config File Location
-All configuration is stored in `~/.netmonitor/config.yaml`
+All configuration is stored in **`config.yaml`** in the project root folder.
 
 ### View Current Configuration:
 ```bash
-cat ~/.netmonitor/config.yaml
+cat config.yaml
 ```
 
 ### Test Config API:
@@ -36,7 +36,7 @@ curl http://localhost:7500/api/config/all
 ```
 
 ### Customize Settings
-Edit `~/.netmonitor/config.yaml` to change:
+Edit `config.yaml` (in project folder) to change:
 - **Sampling interval:** How often network is sampled (default: 1 second)
 - **Port:** Web server port (default: 7500)
 - **Retention policies:** How long to keep raw/aggregated data

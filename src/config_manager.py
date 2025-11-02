@@ -153,8 +153,10 @@ class ConfigManager:
         logger.info("Configuration reloaded")
 
     def _get_config_path(self) -> Path:
-        """Get the path to the configuration file."""
-        return Path.home() / ".netmonitor" / "config.yaml"
+        """Get the path to the configuration file in the project directory."""
+        # Get project root (one level up from src/)
+        project_root = Path(__file__).parent.parent
+        return project_root / "config.yaml"
 
     def _load_config(self) -> Config:
         """Load configuration from YAML file with fallback to defaults."""
