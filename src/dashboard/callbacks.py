@@ -148,35 +148,13 @@ def update_gauge(n):
     Returns:
         Plotly gauge figure
     """
-    # Calculate real-time bandwidth from last 10 seconds of samples
-    current_bandwidth_mbps = 0.0
+    # Get current bandwidth from lightweight endpoint
+    bandwidth_response = fetch_api_data("/api/stats/bandwidth")
 
-    # Fetch recent timeline data (1h period to ensure we have recent samples)
-    timeline_response = fetch_api_data("/api/stats/timeline?period=1h")
-
-    if timeline_response and "timeline" in timeline_response:
-        timeline_data = timeline_response["timeline"]
-
-        if timeline_data:
-            # Filter to last 10 seconds
-            now = datetime.now()
-            cutoff_time = now - timedelta(seconds=10)
-
-            recent_samples = []
-            for sample in timeline_data:
-                try:
-                    sample_time = datetime.fromisoformat(sample.get("timestamp", ""))
-                    if sample_time >= cutoff_time:
-                        recent_samples.append(sample)
-                except (ValueError, TypeError):
-                    continue
-
-            # Calculate bandwidth if we have recent data
-            if recent_samples:
-                total_bytes = sum(sample.get("total_bytes", 0) for sample in recent_samples)
-                time_window_seconds = 10
-                bytes_per_second = total_bytes / time_window_seconds
-                current_bandwidth_mbps = bytes_per_second / (1024 * 1024)
+    if bandwidth_response:
+        current_bandwidth_mbps = bandwidth_response.get("mbps", 0.0)
+    else:
+        current_bandwidth_mbps = 0.0
 
     return create_gauge_chart(
         value=current_bandwidth_mbps,

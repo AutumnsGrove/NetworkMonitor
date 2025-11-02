@@ -149,3 +149,45 @@ async def get_summary_stats(
         "lowest_daily_formatted": format_bytes(summary["lowest_daily_bytes"]),
         "num_days": summary["num_days"]
     }
+
+
+@router.get("/stats/bandwidth")
+async def get_current_bandwidth():
+    """
+    Get current bandwidth usage (bytes/second).
+
+    Calculates bandwidth from the last 10 seconds of network samples.
+    This is a lightweight endpoint optimized for frequent polling.
+
+    Returns:
+        Current bandwidth in bytes/second and MB/s
+    """
+    # Get samples from last 10 seconds
+    since = datetime.now() - timedelta(seconds=10)
+    samples = await get_samples_since(since)
+
+    if not samples:
+        return {
+            "bytes_per_second": 0,
+            "mbps": 0.0,
+            "time_window_seconds": 10,
+            "sample_count": 0
+        }
+
+    # Calculate total bytes in the window
+    total_bytes = sum(
+        sample.bytes_sent + sample.bytes_received
+        for sample in samples
+    )
+
+    # Calculate bytes per second
+    time_window = 10  # seconds
+    bytes_per_second = total_bytes / time_window
+    mbps = bytes_per_second / (1024 * 1024)
+
+    return {
+        "bytes_per_second": int(bytes_per_second),
+        "mbps": round(mbps, 2),
+        "time_window_seconds": time_window,
+        "sample_count": len(samples)
+    }

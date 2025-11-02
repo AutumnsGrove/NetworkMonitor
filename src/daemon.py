@@ -69,6 +69,10 @@ class NetworkDaemon:
         self.app_id_cache: Dict[str, int] = {}  # process_name -> app_id
         self.domain_id_cache: Dict[str, int] = {}  # domain -> domain_id
 
+        # Track previous samples for delta calculation
+        # Key: (process_name, pid) -> (prev_bytes_out, prev_bytes_in)
+        self.previous_bytes: Dict[tuple, tuple] = {}
+
         # Statistics
         self.samples_collected = 0
         self.errors_count = 0
@@ -150,11 +154,16 @@ class NetworkDaemon:
                 logger.debug("No network activity detected by nettop")
                 return
 
+            # Track current process keys for cleanup
+            current_proc_keys = set()
+
             # Process each app
             for proc_data in processes:
                 try:
                     # Get or create application
                     proc_name = proc_data['process_name']
+                    pid = proc_data['pid']
+
                     app = await get_application_by_name(proc_name)
 
                     if not app:
@@ -166,25 +175,61 @@ class NetworkDaemon:
                     else:
                         app_id = app.app_id
 
-                    # Create sample with REAL bytes from nettop
-                    sample = NetworkSample(
-                        timestamp=timestamp,
-                        app_id=app_id,
-                        bytes_sent=proc_data['bytes_out'],
-                        bytes_received=proc_data['bytes_in'],
-                        packets_sent=0,  # nettop doesn't provide packet counts
-                        packets_received=0,
-                        active_connections=1
-                    )
+                    # Get process key for delta tracking
+                    proc_key = (proc_name, pid)
+                    current_proc_keys.add(proc_key)
 
-                    await insert_network_sample(sample)
-                    self.samples_collected += 1
+                    # Get current cumulative bytes from nettop
+                    current_out = proc_data['bytes_out']
+                    current_in = proc_data['bytes_in']
 
-                    if proc_data['bytes_in'] > 0 or proc_data['bytes_out'] > 0:
-                        logger.info(f"{proc_name}: {proc_data['bytes_out']} sent, {proc_data['bytes_in']} recv")
+                    # Calculate delta from previous sample
+                    if proc_key in self.previous_bytes:
+                        prev_out, prev_in = self.previous_bytes[proc_key]
+                        delta_out = current_out - prev_out
+                        delta_in = current_in - prev_in
+
+                        # Handle process restart (cumulative bytes reset to 0)
+                        if delta_out < 0 or delta_in < 0:
+                            logger.debug(f"Process {proc_name}.{pid} restarted, using current values as delta")
+                            delta_out = current_out
+                            delta_in = current_in
+                    else:
+                        # First time seeing this process - use current values
+                        delta_out = current_out
+                        delta_in = current_in
+
+                    # Store current values for next delta calculation
+                    self.previous_bytes[proc_key] = (current_out, current_in)
+
+                    # Only create sample if there's actual delta (skip zero deltas)
+                    if delta_out > 0 or delta_in > 0:
+                        # Create sample with DELTA bytes
+                        sample = NetworkSample(
+                            timestamp=timestamp,
+                            app_id=app_id,
+                            bytes_sent=delta_out,
+                            bytes_received=delta_in,
+                            packets_sent=0,  # nettop doesn't provide packet counts
+                            packets_received=0,
+                            active_connections=1
+                        )
+
+                        await insert_network_sample(sample)
+                        self.samples_collected += 1
+
+                        logger.info(f"{proc_name}.{pid}: {delta_out} sent, {delta_in} recv (delta)")
 
                 except Exception as e:
                     logger.error(f"Error processing {proc_data}: {e}")
+
+            # Clean up stale processes (processes that exited)
+            stale_keys = set(self.previous_bytes.keys()) - current_proc_keys
+            for key in stale_keys:
+                del self.previous_bytes[key]
+
+            if stale_keys:
+                logger.debug(f"Cleaned up {len(stale_keys)} stale process entries")
 
             logger.debug(f"Sampled {len(processes)} processes from nettop")
 
