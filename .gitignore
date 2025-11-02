@@ -35,6 +35,11 @@ env/
 .uv/
 uv.lock
 
+# Testing
+.coverage
+.pytest_cache/
+htmlcov/
+
 # IDEs
 .vscode/
 .idea/
