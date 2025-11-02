@@ -1306,19 +1306,35 @@ def force_aggregation(n_clicks):
     if not n_clicks:
         return ""
 
-    # This endpoint doesn't exist yet - show placeholder message
-    return dbc.Alert(
-        [
-            html.H5("Not Implemented", className="alert-heading"),
-            html.P("Manual aggregation trigger endpoint not yet available."),
-            html.P([
-                html.Strong("TODO: "),
-                "Implement POST /api/config/aggregate endpoint"
-            ], className="mb-0 small")
-        ],
-        color="warning",
-        dismissable=True
-    )
+    try:
+        response = requests.post(
+            "http://localhost:7500/api/config/aggregate",
+            timeout=30
+        )
+        response.raise_for_status()
+        data = response.json()
+
+        return dbc.Alert(
+            [
+                html.H5("✓ Aggregation Complete", className="alert-heading"),
+                html.P(f"Successfully aggregated data:"),
+                html.Ul([
+                    html.Li(f"Hourly aggregates: {data.get('hourly_aggregates', 0)}"),
+                    html.Li(f"Daily aggregates: {data.get('daily_aggregates', 0)}")
+                ])
+            ],
+            color="success",
+            dismissable=True
+        )
+    except Exception as e:
+        return dbc.Alert(
+            [
+                html.H5("Aggregation Failed", className="alert-heading"),
+                html.P(f"Error: {str(e)}")
+            ],
+            color="danger",
+            dismissable=True
+        )
 
 
 @app.callback(
@@ -1339,19 +1355,35 @@ def clear_old_samples(n_clicks):
     if not n_clicks:
         return ""
 
-    # This endpoint doesn't exist yet - show placeholder message
-    return dbc.Alert(
-        [
-            html.H5("Not Implemented", className="alert-heading"),
-            html.P("Manual cleanup endpoint not yet available."),
-            html.P([
-                html.Strong("TODO: "),
-                "Implement POST /api/config/cleanup endpoint"
-            ], className="mb-0 small")
-        ],
-        color="warning",
-        dismissable=True
-    )
+    try:
+        response = requests.post(
+            "http://localhost:7500/api/config/cleanup",
+            timeout=30
+        )
+        response.raise_for_status()
+        data = response.json()
+
+        return dbc.Alert(
+            [
+                html.H5("✓ Cleanup Complete", className="alert-heading"),
+                html.P(f"Successfully cleaned up old data:"),
+                html.Ul([
+                    html.Li(f"Raw samples deleted: {data.get('deleted_samples', 0)}"),
+                    html.Li(f"Hourly aggregates deleted: {data.get('deleted_hourly', 0)}")
+                ])
+            ],
+            color="success",
+            dismissable=True
+        )
+    except Exception as e:
+        return dbc.Alert(
+            [
+                html.H5("Cleanup Failed", className="alert-heading"),
+                html.P(f"Error: {str(e)}")
+            ],
+            color="danger",
+            dismissable=True
+        )
 
 
 @app.callback(
@@ -1372,19 +1404,32 @@ def refresh_cache(n_clicks):
     if not n_clicks:
         return ""
 
-    # This endpoint doesn't exist yet - show placeholder message
-    return dbc.Alert(
-        [
-            html.H5("Not Implemented", className="alert-heading"),
-            html.P("Cache refresh endpoint not yet available."),
-            html.P([
-                html.Strong("TODO: "),
-                "Implement POST /api/config/refresh-cache endpoint"
-            ], className="mb-0 small")
-        ],
-        color="warning",
-        dismissable=True
-    )
+    try:
+        response = requests.post(
+            "http://localhost:7500/api/config/refresh-cache",
+            timeout=10
+        )
+        response.raise_for_status()
+        data = response.json()
+
+        return dbc.Alert(
+            [
+                html.H5("✓ Cache Cleared", className="alert-heading"),
+                html.P("Successfully cleared all internal caches:"),
+                html.Ul([html.Li(cache) for cache in data.get('caches_cleared', [])])
+            ],
+            color="success",
+            dismissable=True
+        )
+    except Exception as e:
+        return dbc.Alert(
+            [
+                html.H5("Cache Refresh Failed", className="alert-heading"),
+                html.P(f"Error: {str(e)}")
+            ],
+            color="danger",
+            dismissable=True
+        )
 
 
 @app.callback(
@@ -1405,20 +1450,45 @@ def export_data(n_clicks):
     if not n_clicks:
         return ""
 
-    # This endpoint doesn't exist yet - show placeholder message
-    return dbc.Alert(
-        [
-            html.H5("Not Implemented", className="alert-heading"),
-            html.P("Data export endpoint not yet available."),
-            html.P([
-                html.Strong("TODO: "),
-                "Implement GET /api/export endpoint with dcc.Download component"
-            ], className="mb-0 small"),
-            html.P([
-                html.Strong("Alternative: "),
-                "Database file is located at ~/.netmonitor/network_monitor.db"
-            ], className="mb-0 small")
-        ],
-        color="info",
-        dismissable=True
-    )
+    try:
+        # Get export data from API
+        response = requests.get(
+            "http://localhost:7500/api/export?format=csv",
+            timeout=30
+        )
+        response.raise_for_status()
+        data = response.json()
+
+        return dbc.Alert(
+            [
+                html.H5("✓ Export Ready", className="alert-heading"),
+                html.P(f"Exported {data.get('rows', 0)} rows of data"),
+                html.P([
+                    html.Strong("Download: "),
+                    html.A(
+                        "Click here to download CSV",
+                        href="http://localhost:7500/api/export?format=csv",
+                        target="_blank",
+                        className="alert-link"
+                    )
+                ]),
+                html.P([
+                    html.Small("Note: Data is limited to 10,000 most recent hourly aggregates")
+                ], className="mb-0")
+            ],
+            color="success",
+            dismissable=True
+        )
+    except Exception as e:
+        return dbc.Alert(
+            [
+                html.H5("Export Failed", className="alert-heading"),
+                html.P(f"Error: {str(e)}"),
+                html.P([
+                    html.Strong("Alternative: "),
+                    "Database file is located at ~/.netmonitor/network_monitor.db"
+                ], className="mb-0 small")
+            ],
+            color="danger",
+            dismissable=True
+        )
