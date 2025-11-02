@@ -1137,11 +1137,18 @@ def update_system_status(n):
         if last_agg_raw:
             last_aggregation = last_agg_raw
 
+    # Get actual sampling interval from config
+    config_all = fetch_api_data("/api/config/all")
+    sampling_interval = 1  # default
+    if config_all and "config" in config_all:
+        if "daemon.sampling_interval_seconds" in config_all["config"]:
+            sampling_interval = int(config_all["config"]["daemon.sampling_interval_seconds"]["value"])
+
     # Build status data
     status_data = {
         "daemon_running": daemon_status.get("running", False) if daemon_status else False,
         "daemon_uptime": format_uptime(daemon_status.get("start_time")) if daemon_status else "N/A",
-        "sampling_interval": daemon_status.get("sampling_interval", 5) if daemon_status else 5,
+        "sampling_interval": sampling_interval,
         "db_path": db_path,
         "db_size": db_size,
         "sample_count": summary_stats.get("total_samples", 0) if summary_stats else 0,
@@ -1169,11 +1176,11 @@ def load_current_config(n):
     Returns:
         Tuple of 5 values for each form field
     """
-    # Fetch config
-    api_response = fetch_api_data("/api/config")
+    # Fetch config from new endpoint
+    api_response = fetch_api_data("/api/config/all")
 
     # Default values
-    sampling = 5
+    sampling = 1
     retention_raw = 7
     retention_hourly = 90
     port = 7500
@@ -1182,12 +1189,22 @@ def load_current_config(n):
     if api_response and "config" in api_response:
         config = api_response["config"]
 
-        # Extract values with defaults
-        sampling = int(config.get("sampling_interval_seconds", 5))
-        retention_raw = int(config.get("data_retention_days_raw", 7))
-        retention_hourly = int(config.get("data_retention_days_hourly", 90))
-        port = int(config.get("web_server_port", 7500))
-        log_level = config.get("log_level", "INFO")
+        # Extract values from new format (config keys have "section.key" format)
+        # Each value is a dict with "value" and "source" keys
+        if "daemon.sampling_interval_seconds" in config:
+            sampling = int(config["daemon.sampling_interval_seconds"]["value"])
+
+        if "retention.raw_samples_days" in config:
+            retention_raw = int(config["retention.raw_samples_days"]["value"])
+
+        if "retention.hourly_aggregates_days" in config:
+            retention_hourly = int(config["retention.hourly_aggregates_days"]["value"])
+
+        if "server.port" in config:
+            port = int(config["server.port"]["value"])
+
+        if "logging.level" in config:
+            log_level = config["logging.level"]["value"]
 
     return sampling, retention_raw, retention_hourly, port, log_level
 
