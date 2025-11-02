@@ -4,6 +4,62 @@
 
 ---
 
+## Installation Options
+
+### Option 1: Auto-Start on Login (Recommended)
+
+Install the LaunchAgent for automatic startup:
+
+```bash
+cd launchagent
+./install.sh
+```
+
+✅ **Benefits:**
+- Starts automatically when you log in
+- Runs in the background continuously
+- No manual startup required
+- Automatic restart if it crashes
+
+**See `launchagent/README.md` for details.**
+
+### Option 2: UV Tool Installation
+
+Install as a command-line tool:
+
+```bash
+# Install the tool
+uv tool install .
+
+# Run from anywhere
+sudo network-monitor
+
+# With options
+sudo network-monitor --debug
+sudo network-monitor --port 8000
+```
+
+✅ **Benefits:**
+- Run from any directory
+- Simple command: `network-monitor`
+- No need to type full path
+- Still requires manual startup
+
+### Option 3: Manual Startup (Development)
+
+Run directly from the project directory:
+
+```bash
+sudo uv run python main.py
+```
+
+✅ **Benefits:**
+- Full control over when it runs
+- Easy to stop and restart
+- Good for testing and development
+
+---
+
 ## Prerequisites
 
 1. **Python 3.10+** installed
@@ -252,9 +308,58 @@ sudo uv run python main.py
 
 ## Auto-Start on Login (LaunchAgent)
 
-**Coming soon**: LaunchAgent plist for automatic startup on macOS login.
+**Status**: ✅ Available!
 
-For now, you must manually run `sudo uv run python main.py` after each boot.
+To enable auto-start on login:
+
+```bash
+cd launchagent
+./install.sh
+```
+
+This will:
+- Install the LaunchAgent to `~/Library/LaunchAgents/`
+- Configure passwordless sudo for packet capture
+- Start the Network Monitor immediately
+- Enable auto-start on future logins
+
+**To uninstall:**
+```bash
+cd launchagent
+./uninstall.sh
+```
+
+**For detailed instructions and troubleshooting:**
+See `launchagent/README.md`
+
+---
+
+## UV Tool Installation
+
+To install Network Monitor as a command-line tool:
+
+```bash
+# From the project directory
+uv tool install .
+```
+
+**Usage:**
+```bash
+# Run from anywhere
+sudo network-monitor
+
+# With options
+sudo network-monitor --debug
+sudo network-monitor --no-menubar
+sudo network-monitor --port 8000
+```
+
+**To uninstall:**
+```bash
+uv tool uninstall network-monitor
+```
+
+**Note:** Even as a UV tool, `sudo` is still required for packet capture.
 
 ---
 
