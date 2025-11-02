@@ -4,6 +4,24 @@
 
 ---
 
+## ⚠️ MANDATORY: Read Guides Before Tasks
+
+**YOU MUST read the relevant guide BEFORE starting these tasks. No exceptions.**
+
+| Task | Required Reading | Action |
+|------|-----------------|--------|
+| **Making ANY commit** | `ClaudeUsage/git_commit_guide.md` | Read FIRST, then commit |
+| **Searching 20+ files** | `ClaudeUsage/house_agents.md` | Use house-research agent |
+| **Writing tests** | `ClaudeUsage/testing_strategies.md` | Read FIRST, then code |
+| **Managing secrets/API keys** | `ClaudeUsage/secrets_management.md` | Read FIRST, then implement |
+| **Using UV/dependencies** | `ClaudeUsage/uv_usage.md` | Read FIRST, then modify |
+| **Refactoring code** | `ClaudeUsage/code_style_guide.md` | Read FIRST, then refactor |
+| **Starting new project** | `ClaudeUsage/project_setup.md` | Read FIRST, then initialize |
+
+**If you skip reading the guide, you're doing it wrong. These are mandatory workflows, not optional documentation.**
+
+---
+
 ## Project Purpose
 A lightweight, privacy-focused network monitoring tool for macOS that tracks application-level network usage with enhanced domain-level tracking for web browsers. Provides a rich web-based dashboard for visualizing network consumption patterns over time.
 
