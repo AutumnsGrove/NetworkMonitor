@@ -1,6 +1,6 @@
 # Network Monitor - Progress So Far
 
-**Project Status:** Phases 1-3 Complete (Backend Foundation)
+**Project Status:** Backend Complete + Integration Testing (Phases 1-3 + Testing)
 **Last Updated:** November 1, 2025
 **Current Version:** 0.1.0
 
@@ -369,19 +369,90 @@ All dependencies synced via `uv sync`.
 
 ---
 
+### Phase 4: Integration Testing & Validation (COMPLETE)
+
+**Deliverables:**
+- [x] Test infrastructure with pytest-mock, httpx, pytest-cov
+- [x] `tests/conftest.py` - Shared pytest fixtures (16 fixtures, 523 lines)
+- [x] `tests/fixtures.py` - Realistic mock data (652 lines)
+- [x] `tests/test_integration.py` - Integration tests (15 tests, 867 lines)
+- [x] `tests/test_api.py` - API endpoint tests (47 tests, 947 lines)
+- [x] `tests/test_process_mapper.py` - Component tests (43 tests, 841 lines)
+- [x] `tests/test_daemon.py` - Daemon tests (50 tests, 1,061 lines)
+- [x] `tests/test_database.py` - Expanded utility tests (+63 tests, 83 total)
+
+**Test Coverage:**
+- **238 total tests** - 100% pass rate
+- **79% code coverage** (target was >70%)
+- **Test execution time:** 11.31 seconds
+- **~5,768 lines of test code**
+
+**Coverage by Module:**
+- `src/api/applications.py` - 100%
+- `src/api/domains.py` - 100%
+- `src/api/stats.py` - 100%
+- `src/process_mapper.py` - 99% (up from 35%)
+- `src/utils.py` - 97% (up from 67%)
+- `src/db_queries.py` - 97%
+- `src/daemon.py` - 96% (up from 77%)
+- `src/models.py` - 95%
+- `src/api/config.py` - 93%
+- `src/api/browser.py` - 85%
+
+**Test Infrastructure:**
+- **Shared Fixtures (tests/conftest.py):**
+  - Database fixtures (temp_db, db_with_sample_data)
+  - FastAPI test clients (sync and async)
+  - Mock fixtures (lsof output, process info, daemon)
+  - Time fixtures (fixed_time, time_ranges, hour_boundaries)
+  - Factory fixtures (make_application, make_domain, make_network_sample, etc.)
+
+- **Mock Data (tests/fixtures.py):**
+  - Sample lsof output (IPv4, IPv6, multiple processes)
+  - Sample process metadata (Safari, Chrome, Zen, etc.)
+  - Sample domains (40+ with parent/child relationships)
+  - Sample applications and network samples
+  - Helper functions for generating test data
+
+**Integration Tests Coverage:**
+- Database initialization flow (fresh install, idempotent re-init)
+- Daemon + Database integration (lifecycle, sampling, caching)
+- Browser domain tracking (extension integration, parent rollup)
+- Retention and aggregation (hourly/daily aggregates, cleanup)
+
+**API Tests Coverage:**
+- All stats endpoints (empty DB, with data, timeline, filtering)
+- All application endpoints (list, detail, timeline, 404s)
+- All domain endpoints (list, detail, top N, filters)
+- Browser endpoints (POST validation, status)
+- Config endpoints (CRUD, validation, daemon status)
+- Query parameter validation (limit, since, period, sort_by)
+- Error handling (404, 400, 422)
+
+**Component Tests Coverage:**
+- ProcessMapper (lsof parsing, caching, bundle ID extraction)
+- NetworkDaemon (lifecycle, sampling, error handling, signals)
+- Utility functions (time, formatting, validation, paths)
+
+**Bug Fixes:**
+- Fixed SQL NULL handling in domain stats query (added COALESCE for LEFT JOIN)
+
+---
+
 ## Git Commits
 
 1. **Initial commit:** Project scaffolding from BaseProject template
 2. **Phase 1 commit:** Database Foundation with comprehensive schema and testing
 3. **Phase 2 commit:** Network Capture Daemon with process mapping
 4. **Phase 3 commit:** FastAPI Server & REST API endpoints
+5. **Phase 4 commit:** Comprehensive integration testing suite (238 tests, 79% coverage)
 
 ---
 
 ## Next Steps
 
-See `NEXT_STEPS.md` for detailed plan on integration testing and Phase 4 preparation.
+See `NEXT_STEPS.md` for detailed plan on Phase 5: Dashboard Visualizations (Plotly/Dash).
 
 ---
 
-**Summary:** We have a fully functional backend that can monitor network activity, store data with retention policies, and serve it via a REST API. The next priority is integration testing to validate the complete flow before building the UI.
+**Summary:** We have a fully functional backend that can monitor network activity, store data with retention policies, and serve it via a REST API. The backend is now comprehensively tested with 238 passing tests and 79% code coverage. The next priority is building the web-based dashboard for visualizing network usage data.
