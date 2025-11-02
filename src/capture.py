@@ -14,11 +14,22 @@ from dataclasses import dataclass, field
 try:
     from scapy.all import (
         sniff, IP, IPv6, TCP, UDP, DNS, DNSQR, DNSRR,
-        TLS, get_if_list, conf
+        get_if_list, conf
     )
+    # Try to import TLS (may not be available in all scapy versions)
+    try:
+        from scapy.layers.tls.all import TLS
+        TLS_AVAILABLE = True
+    except ImportError:
+        TLS = None
+        TLS_AVAILABLE = False
+        logging.info("TLS layer not available in scapy - HTTPS SNI extraction disabled")
+
     SCAPY_AVAILABLE = True
 except ImportError:
     SCAPY_AVAILABLE = False
+    TLS = None
+    TLS_AVAILABLE = False
     logging.warning("Scapy not available - packet capture will not work")
 
 
@@ -136,7 +147,7 @@ class NetworkCapture:
                 self._process_dns(packet)
 
             # Extract TLS SNI (for HTTPS domains)
-            if packet.haslayer(TLS):
+            if TLS and packet.haslayer(TLS):
                 self._process_tls(packet)
 
             # Extract general packet info

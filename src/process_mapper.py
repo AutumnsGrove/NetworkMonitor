@@ -25,6 +25,7 @@ class ProcessInfo:
     name: str
     path: str
     bundle_id: Optional[str] = None
+    remote_address: Optional[str] = None  # Remote IP:port from lsof (e.g., "192.168.1.1:443")
 
 
 class ProcessMapper:
@@ -209,6 +210,7 @@ class ProcessMapper:
 
         try:
             # Run lsof for all network connections
+            # Format: p=PID, c=command, n=network address
             cmd = ['lsof', '-i', '-n', '-P', '-F', 'pcn']
             result = subprocess.run(
                 cmd,
@@ -220,42 +222,56 @@ class ProcessMapper:
             if result.returncode != 0:
                 return []
 
-            # Parse output
+            # Parse output - lsof -F format is field-per-line
+            # p<pid>, c<command>, n<network_addr>
             lines = result.stdout.strip().split('\n')
-            current_process = {}
+            current_pid = None
+            current_name = None
+            current_path = None
+            current_bundle = None
 
             for line in lines:
                 if not line:
-                    if current_process:
-                        # Create ProcessInfo from current_process
-                        if 'pid' in current_process and 'name' in current_process:
-                            path = self._get_process_path(current_process['pid'])
-                            bundle_id = self._get_bundle_id(path) if path else None
-
-                            processes.append(ProcessInfo(
-                                pid=current_process['pid'],
-                                name=current_process['name'],
-                                path=path or current_process['name'],
-                                bundle_id=bundle_id
-                            ))
-                        current_process = {}
                     continue
 
                 if line.startswith('p'):
-                    current_process['pid'] = int(line[1:])
+                    # New process - commit previous if exists
+                    current_pid = int(line[1:])
+                    current_name = None
+                    current_path = None
+                    current_bundle = None
                 elif line.startswith('c'):
-                    current_process['name'] = line[1:]
+                    current_name = line[1:]
+                elif line.startswith('n'):
+                    # Network address - create ProcessInfo for each connection
+                    if current_pid and current_name:
+                        network_addr = line[1:]
 
-            # Handle last process
-            if current_process and 'pid' in current_process and 'name' in current_process:
-                path = self._get_process_path(current_process['pid'])
-                bundle_id = self._get_bundle_id(path) if path else None
-                processes.append(ProcessInfo(
-                    pid=current_process['pid'],
-                    name=current_process['name'],
-                    path=path or current_process['name'],
-                    bundle_id=bundle_id
-                ))
+                        # Extract remote address from network string
+                        # Format examples:
+                        # *:7000 (listening)
+                        # 192.168.1.1:443->192.168.1.2:54321 (established)
+                        # [::1]:8080->[::1]:54322 (IPv6)
+                        remote_addr = None
+                        if '->' in network_addr:
+                            # Extract remote part after ->
+                            remote_part = network_addr.split('->')[1]
+                            # Clean up IPv6 brackets if present
+                            remote_addr = remote_part.strip('[]')
+
+                        # Get process info (cache these to avoid repeated lookups)
+                        if not current_path:
+                            current_path = self._get_process_path(current_pid)
+                        if not current_bundle and current_path:
+                            current_bundle = self._get_bundle_id(current_path)
+
+                        processes.append(ProcessInfo(
+                            pid=current_pid,
+                            name=current_name,
+                            path=current_path or current_name,
+                            bundle_id=current_bundle,
+                            remote_address=remote_addr
+                        ))
 
         except Exception as e:
             logger.error(f"Error getting network processes: {e}", exc_info=True)
