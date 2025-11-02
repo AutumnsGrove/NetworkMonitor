@@ -12,6 +12,7 @@ from pathlib import Path
 from src.db_queries import get_config, set_config
 from src.utils import get_config_path, is_valid_port, is_valid_interval, is_valid_retention_days
 from src.daemon import get_daemon
+from src.config_manager import get_config_manager
 
 
 router = APIRouter()
@@ -182,4 +183,34 @@ async def initialize_config():
         "status": "success",
         "path": str(config_path),
         "config": default_config.model_dump()
+    }
+
+
+@router.get("/config/all")
+async def get_all_config_values():
+    """
+    Get all configuration values from the config manager.
+
+    Returns all config values with their sources (file/database/default).
+
+    Returns:
+        Dictionary with all config values and metadata
+    """
+    config_mgr = get_config_manager()
+    config = config_mgr.config
+
+    # Get all config values
+    all_values = config_mgr.get_all_config_values()
+
+    # Add source information
+    config_with_sources = {}
+    for key, value in all_values.items():
+        config_with_sources[key] = {
+            "value": value,
+            "source": config.get_config_source(key)
+        }
+
+    return {
+        "config": config_with_sources,
+        "config_file": str(config_mgr._get_config_path())
     }

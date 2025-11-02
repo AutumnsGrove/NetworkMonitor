@@ -2,10 +2,10 @@
 Main Dash application for Network Monitor dashboard.
 Provides interactive web interface for visualizing network usage data.
 """
-import dash
 import dash_bootstrap_components as dbc
 from dash import dcc, html, Input, Output
 
+from src.dashboard.app_instance import app
 from src.dashboard.components import create_navbar, create_footer
 from src.dashboard.layouts import (
     overview_layout,
@@ -13,15 +13,6 @@ from src.dashboard.layouts import (
     domains_layout,
     history_layout,
     config_layout,
-)
-
-
-# Initialize Dash app with Bootstrap theme
-app = dash.Dash(
-    __name__,
-    external_stylesheets=[dbc.themes.BOOTSTRAP],
-    requests_pathname_prefix="/dashboard/",
-    suppress_callback_exceptions=True,
 )
 
 # Define the main layout with navigation and page content area
@@ -76,8 +67,8 @@ def display_page(pathname):
         ])
 
 
-# Import and register callbacks AFTER app is created
+# Import and register callbacks AFTER layout is defined
 from src.dashboard import callbacks
 
-# Server instance for WSGI integration with FastAPI
-server = app.server
+# Export server instance for WSGI integration with FastAPI
+from src.dashboard.app_instance import server

@@ -3,10 +3,13 @@ Dash callbacks for interactivity and data updates.
 Handles all user interactions and real-time data updates for the dashboard.
 """
 import dash_bootstrap_components as dbc
-from dash import callback, Input, Output, State, html
+from dash import Input, Output, State, html
 from datetime import datetime
 import plotly.graph_objs as go
 import requests
+
+# Import app instance for callback registration
+from src.dashboard.app_instance import app
 
 from src.dashboard.components import (
     fetch_api_data,
@@ -25,9 +28,6 @@ from src.dashboard.components import (
     get_week_dates,
     get_month_dates,
     format_date_for_api,
-    generate_mock_heatmap_data,
-    generate_mock_weekly_data,
-    generate_mock_monthly_data,
 )
 from src.utils import format_bytes
 from src.dashboard.styles import COLORS
@@ -37,7 +37,7 @@ from src.dashboard.styles import COLORS
 # Overview Page Callbacks
 # ============================================================================
 
-@callback(
+@app.callback(
     Output("stats-cards", "children"),
     Input("overview-interval", "n_intervals")
 )
@@ -134,7 +134,7 @@ def update_stats_cards(n):
     return dbc.Row(cards)
 
 
-@callback(
+@app.callback(
     Output("overview-gauge", "figure"),
     Input("overview-interval", "n_intervals")
 )
@@ -168,7 +168,7 @@ def update_gauge(n):
     )
 
 
-@callback(
+@app.callback(
     Output("overview-timeline", "figure"),
     Input("time-range-selector", "value"),
     Input("overview-interval", "n_intervals")
@@ -214,7 +214,7 @@ def update_timeline(period, n):
     return create_timeline_chart(chart_data, title=title)
 
 
-@callback(
+@app.callback(
     Output("apps-pie-chart", "figure"),
     Input("overview-interval", "n_intervals")
 )
@@ -248,7 +248,7 @@ def update_apps_pie(n):
     return create_pie_chart(chart_data, title="Top 10 Applications")
 
 
-@callback(
+@app.callback(
     Output("domains-pie-chart", "figure"),
     Input("overview-interval", "n_intervals")
 )
@@ -286,7 +286,7 @@ def update_domains_pie(n):
 # Applications Page Callbacks
 # ============================================================================
 
-@callback(
+@app.callback(
     Output("applications-table-container", "children"),
     Output("app-compare-checklist", "options"),
     Input("app-search-input", "value")
@@ -347,7 +347,7 @@ def update_applications_table(search_term):
     return table, checklist_options
 
 
-@callback(
+@app.callback(
     Output("selected-app-details", "style"),
     Output("selected-app-title", "children"),
     Input("applications-table", "selected_rows"),
@@ -375,7 +375,7 @@ def show_app_details(selected_rows, table_data):
     return {"display": "block"}, f"Details: {app_name}"
 
 
-@callback(
+@app.callback(
     Output("app-timeline", "figure"),
     Input("applications-table", "selected_rows"),
     State("applications-table", "data")
@@ -421,7 +421,7 @@ def update_app_timeline(selected_rows, table_data):
     return create_timeline_chart(chart_data, title=f"Timeline: {app_name}")
 
 
-@callback(
+@app.callback(
     Output("app-breakdown", "figure"),
     Output("app-packets", "figure"),
     Input("applications-table", "selected_rows"),
@@ -505,7 +505,7 @@ def update_app_breakdown(selected_rows, table_data):
     return bytes_fig, packets_fig
 
 
-@callback(
+@app.callback(
     Output("app-comparison-timeline", "figure"),
     Input("app-compare-checklist", "value")
 )
@@ -600,7 +600,7 @@ def update_comparison_timeline(selected_app_ids):
 # Domains Page Callbacks
 # ============================================================================
 
-@callback(
+@app.callback(
     Output("domains-table-container", "children"),
     Input("browser-filter", "value"),
     Input("parent-only-switch", "value")
@@ -653,7 +653,7 @@ def update_domains_table(browser, parent_only):
     return create_domains_table(table_data)
 
 
-@callback(
+@app.callback(
     Output("domain-tree", "children"),
     Input("browser-filter", "value"),
     Input("parent-only-switch", "value")
@@ -691,7 +691,7 @@ def update_domain_tree(browser, parent_only):
     return create_domain_tree(domains_data)
 
 
-@callback(
+@app.callback(
     Output("selected-domain-details", "style"),
     Output("selected-domain-title", "children"),
     Input("domains-table", "selected_rows"),
@@ -719,7 +719,7 @@ def show_domain_details(selected_rows, table_data):
     return {"display": "block"}, f"Details: {domain_name}"
 
 
-@callback(
+@app.callback(
     Output("domain-timeline", "figure"),
     Input("domains-table", "selected_rows"),
     State("domains-table", "data")
@@ -780,7 +780,7 @@ def update_domain_timeline(selected_rows, table_data):
     return fig
 
 
-@callback(
+@app.callback(
     Output("domain-browser-breakdown", "figure"),
     Input("domains-table", "selected_rows"),
     State("domains-table", "data")
@@ -832,7 +832,7 @@ def update_browser_breakdown(selected_rows, table_data):
 # History Page Callbacks
 # ============================================================================
 
-@callback(
+@app.callback(
     Output("history-date-range", "start_date"),
     Output("history-date-range", "end_date"),
     Input("preset-this-week", "n_clicks"),
@@ -885,7 +885,7 @@ def update_date_range_from_preset(tw, lw, tm, lm, nd):
     return start_date, end_date
 
 
-@callback(
+@app.callback(
     Output("hourly-heatmap", "figure"),
     Input("history-date-range", "start_date"),
     Input("history-date-range", "end_date")
@@ -901,18 +901,18 @@ def update_hourly_heatmap(start_date, end_date):
     Returns:
         Plotly heatmap figure
     """
-    # For now, use mock data since we may not have enough historical data
-    # Real implementation would query hourly_aggregates table:
-    # SELECT day_of_week, hour, SUM(total_bytes)
-    # FROM hourly_aggregates
-    # WHERE date BETWEEN start_date AND end_date
-    # GROUP BY day_of_week, hour
+    # Fetch real data from API
+    api_response = fetch_api_data(f"/api/historical/heatmap?start_date={start_date}&end_date={end_date}")
 
-    # TODO: Replace with actual API call when database has enough data
-    # api_response = fetch_api_data(f"/api/stats/heatmap?start_date={start_date}&end_date={end_date}")
+    if not api_response or "data" not in api_response:
+        # No data available
+        return create_heatmap(
+            [],
+            title=f"Hourly Usage Heatmap ({start_date} to {end_date})"
+        )
 
-    # Generate mock data for now
-    heatmap_data = generate_mock_heatmap_data()
+    # Transform API response to expected format for heatmap
+    heatmap_data = api_response["data"]
 
     return create_heatmap(
         heatmap_data,
@@ -920,7 +920,7 @@ def update_hourly_heatmap(start_date, end_date):
     )
 
 
-@callback(
+@app.callback(
     Output("weekly-trends", "figure"),
     Input("history-date-range", "start_date"),
     Input("history-date-range", "end_date")
@@ -936,18 +936,37 @@ def update_weekly_trends(start_date, end_date):
     Returns:
         Plotly multi-line figure
     """
-    # Real implementation would:
-    # 1. Get current week data from daily_aggregates
-    # 2. Get last week data
-    # 3. Calculate average week across all weeks in database
+    # Fetch real weekly comparison data from API
+    api_response = fetch_api_data("/api/historical/weekly")
 
-    # TODO: Replace with actual API calls
-    # current_week = fetch_api_data(f"/api/stats/weekly?week=current")
-    # last_week = fetch_api_data(f"/api/stats/weekly?week=last")
-    # avg_week = fetch_api_data(f"/api/stats/weekly?week=average")
+    if not api_response or "data" not in api_response:
+        # No data available
+        return create_multi_line_chart(
+            [],
+            title="Weekly Trends Comparison",
+            x_label="Day of Week",
+            y_label="Data Usage"
+        )
 
-    # Generate mock data for now
-    datasets = generate_mock_weekly_data()
+    # Transform API response to datasets format
+    day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    datasets = [
+        {
+            "name": "Current Week",
+            "data": [day["current_week"] for day in api_response["data"]],
+            "x": day_names
+        },
+        {
+            "name": "Last Week",
+            "data": [day["last_week"] for day in api_response["data"]],
+            "x": day_names
+        },
+        {
+            "name": "Average",
+            "data": [day["average"] for day in api_response["data"]],
+            "x": day_names
+        }
+    ]
 
     return create_multi_line_chart(
         datasets,
@@ -957,7 +976,7 @@ def update_weekly_trends(start_date, end_date):
     )
 
 
-@callback(
+@app.callback(
     Output("monthly-comparison", "figure"),
     Input("history-date-range", "start_date"),
     Input("history-date-range", "end_date")
@@ -973,17 +992,18 @@ def update_monthly_comparison(start_date, end_date):
     Returns:
         Plotly bar chart figure
     """
-    # Real implementation would query daily_aggregates grouped by month:
-    # SELECT strftime('%Y-%m', date) as month, SUM(total_bytes)
-    # FROM daily_aggregates
-    # WHERE date BETWEEN start_date AND end_date
-    # GROUP BY month
+    # Fetch real monthly data from API
+    api_response = fetch_api_data("/api/historical/monthly?months=6")
 
-    # TODO: Replace with actual API call
-    # api_response = fetch_api_data(f"/api/stats/monthly?start_date={start_date}&end_date={end_date}")
+    if not api_response or "data" not in api_response:
+        # No data available
+        return create_monthly_bar_chart(
+            [],
+            title="Monthly Data Usage Comparison"
+        )
 
-    # Generate mock data for now
-    months_data = generate_mock_monthly_data()
+    # Transform API response to expected format
+    months_data = api_response["data"]
 
     return create_monthly_bar_chart(
         months_data,
@@ -991,7 +1011,7 @@ def update_monthly_comparison(start_date, end_date):
     )
 
 
-@callback(
+@app.callback(
     Output("history-summary-cards", "children"),
     Input("history-date-range", "start_date"),
     Input("history-date-range", "end_date")
@@ -1082,7 +1102,7 @@ def update_summary_cards(start_date, end_date):
 # Config Page Callbacks
 # ============================================================================
 
-@callback(
+@app.callback(
     Output("system-status-card", "children"),
     Input("config-interval", "n_intervals")
 )
@@ -1121,6 +1141,7 @@ def update_system_status(n):
     status_data = {
         "daemon_running": daemon_status.get("running", False) if daemon_status else False,
         "daemon_uptime": format_uptime(daemon_status.get("start_time")) if daemon_status else "N/A",
+        "sampling_interval": daemon_status.get("sampling_interval", 5) if daemon_status else 5,
         "db_path": db_path,
         "db_size": db_size,
         "sample_count": summary_stats.get("total_samples", 0) if summary_stats else 0,
@@ -1130,7 +1151,7 @@ def update_system_status(n):
     return create_system_status_card(status_data)
 
 
-@callback(
+@app.callback(
     Output("sampling-interval-slider", "value"),
     Output("retention-raw-slider", "value"),
     Output("retention-hourly-slider", "value"),
@@ -1171,7 +1192,7 @@ def load_current_config(n):
     return sampling, retention_raw, retention_hourly, port, log_level
 
 
-@callback(
+@app.callback(
     Output("settings-save-status", "children"),
     Input("save-settings-button", "n_clicks"),
     State("sampling-interval-slider", "value"),
@@ -1250,7 +1271,7 @@ def save_settings(n_clicks, sampling, retention_raw, retention_hourly, port, log
         )
 
 
-@callback(
+@app.callback(
     Output("operations-status", "children", allow_duplicate=True),
     Input("force-aggregation-button", "n_clicks"),
     prevent_initial_call=True
@@ -1283,7 +1304,7 @@ def force_aggregation(n_clicks):
     )
 
 
-@callback(
+@app.callback(
     Output("operations-status", "children", allow_duplicate=True),
     Input("clear-samples-button", "n_clicks"),
     prevent_initial_call=True
@@ -1316,7 +1337,7 @@ def clear_old_samples(n_clicks):
     )
 
 
-@callback(
+@app.callback(
     Output("operations-status", "children", allow_duplicate=True),
     Input("refresh-cache-button", "n_clicks"),
     prevent_initial_call=True
@@ -1349,7 +1370,7 @@ def refresh_cache(n_clicks):
     )
 
 
-@callback(
+@app.callback(
     Output("operations-status", "children", allow_duplicate=True),
     Input("export-data-button", "n_clicks"),
     prevent_initial_call=True

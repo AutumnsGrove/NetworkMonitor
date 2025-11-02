@@ -1053,124 +1053,6 @@ def format_date_for_api(date) -> str:
 
 
 # ============================================================================
-# Mock Data Generators (for testing without historical data)
-# ============================================================================
-
-def generate_mock_heatmap_data() -> List[List[float]]:
-    """
-    Generate realistic mock data for hourly heatmap.
-
-    Returns:
-        7×24 matrix with higher usage during business hours, lower at night
-    """
-    import random
-
-    data = []
-    for day in range(7):  # 7 days (Mon-Sun)
-        day_data = []
-        is_weekend = day >= 5  # Saturday and Sunday
-
-        for hour in range(24):  # 24 hours
-            # Business hours (9-17) have higher usage
-            if 9 <= hour <= 17 and not is_weekend:
-                base_usage = random.uniform(500_000_000, 2_000_000_000)  # 500 MB - 2 GB
-            # Evening hours (18-23) have medium usage
-            elif 18 <= hour <= 23:
-                base_usage = random.uniform(200_000_000, 800_000_000)  # 200 MB - 800 MB
-            # Night hours (0-6) have low usage
-            elif 0 <= hour <= 6:
-                base_usage = random.uniform(10_000_000, 100_000_000)  # 10 MB - 100 MB
-            # Morning hours (7-8) ramping up
-            else:
-                base_usage = random.uniform(100_000_000, 400_000_000)  # 100 MB - 400 MB
-
-            # Weekend modifier
-            if is_weekend:
-                base_usage *= 0.6
-
-            day_data.append(base_usage)
-
-        data.append(day_data)
-
-    return data
-
-
-def generate_mock_weekly_data() -> List[Dict]:
-    """
-    Generate mock weekly comparison data.
-
-    Returns:
-        List of 3 datasets (current week, last week, average)
-    """
-    import random
-
-    days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-
-    # Current week (higher usage)
-    current_week = [random.uniform(1_000_000_000, 5_000_000_000) for _ in range(7)]
-
-    # Last week (slightly lower)
-    last_week = [val * random.uniform(0.7, 0.9) for val in current_week]
-
-    # Average week (middle ground)
-    avg_week = [(current_week[i] + last_week[i]) / 2 * random.uniform(0.9, 1.1) for i in range(7)]
-
-    return [
-        {
-            "name": "Current Week",
-            "x_values": days,
-            "y_values": current_week
-        },
-        {
-            "name": "Last Week",
-            "x_values": days,
-            "y_values": last_week
-        },
-        {
-            "name": "Average",
-            "x_values": days,
-            "y_values": avg_week
-        }
-    ]
-
-
-def generate_mock_monthly_data() -> List[Dict]:
-    """
-    Generate mock monthly comparison data.
-
-    Returns:
-        List of 12 months with total_bytes and is_current flag
-    """
-    import random
-    from datetime import datetime
-
-    current_month = datetime.now().month
-    month_names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-
-    months_data = []
-    for i in range(12):
-        month_idx = (current_month - 12 + i) % 12
-        is_current = (month_idx == current_month - 1)
-
-        # Generate realistic monthly usage (50 GB - 200 GB)
-        total_bytes = random.uniform(50_000_000_000, 200_000_000_000)
-
-        # Current month might be partial
-        if is_current:
-            day_of_month = datetime.now().day
-            total_bytes = total_bytes * (day_of_month / 30)
-
-        months_data.append({
-            "month": month_names[month_idx],
-            "total_bytes": total_bytes,
-            "is_current": is_current
-        })
-
-    return months_data
-
-
-# ============================================================================
 # Configuration Page Components
 # ============================================================================
 
@@ -1187,6 +1069,7 @@ def create_system_status_card(status_data: Dict) -> dbc.Card:
     # Extract daemon status
     daemon_running = status_data.get("daemon_running", False)
     daemon_uptime = status_data.get("daemon_uptime", "N/A")
+    sampling_interval = status_data.get("sampling_interval", 5)
 
     # Extract database info
     db_path = status_data.get("db_path", "N/A")
@@ -1208,11 +1091,15 @@ def create_system_status_card(status_data: Dict) -> dbc.Card:
             dbc.Row([
                 dbc.Col([
                     html.H5(["Daemon Status: ", status_badge], className="mb-3"),
-                ], width=12, md=6),
+                ], width=12, md=4),
 
                 dbc.Col([
                     html.H5(f"Uptime: {daemon_uptime}", className="mb-3"),
-                ], width=12, md=6),
+                ], width=12, md=4),
+
+                dbc.Col([
+                    html.H5(f"Sampling: {sampling_interval}s", className="mb-3"),
+                ], width=12, md=4),
             ]),
 
             dbc.Row([

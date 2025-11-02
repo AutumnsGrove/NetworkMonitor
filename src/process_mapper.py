@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from src.utils import get_process_name_from_path
+from src.config_manager import get_config
 
 
 logger = logging.getLogger(__name__)
@@ -35,6 +36,7 @@ class ProcessMapper:
 
     def __init__(self):
         """Initialize process mapper."""
+        self.config = get_config()
         self.connection_cache: Dict[Tuple[str, int], ProcessInfo] = {}
         logger.info("Initialized ProcessMapper")
 
@@ -83,7 +85,7 @@ class ProcessMapper:
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=2
+                timeout=self.config.process_mapper.ps_timeout_seconds
             )
 
             if result.returncode != 0:
@@ -143,7 +145,7 @@ class ProcessMapper:
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=1
+                timeout=self.config.process_mapper.ps_timeout_seconds
             )
 
             if result.returncode == 0:
@@ -185,7 +187,7 @@ class ProcessMapper:
                         cmd,
                         capture_output=True,
                         text=True,
-                        timeout=1
+                        timeout=self.config.process_mapper.bundle_timeout_seconds
                     )
 
                     if result.returncode == 0:
@@ -212,7 +214,7 @@ class ProcessMapper:
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=5
+                timeout=self.config.process_mapper.lsof_timeout_seconds
             )
 
             if result.returncode != 0:
@@ -304,7 +306,7 @@ class MacOSProcessHelper:
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=1
+                timeout=self.config.process_mapper.ps_timeout_seconds
             )
 
             if result.returncode != 0:
@@ -347,7 +349,7 @@ class MacOSProcessHelper:
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=5
+                timeout=self.config.process_mapper.lsof_timeout_seconds
             )
 
             if result.returncode != 0:

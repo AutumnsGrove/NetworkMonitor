@@ -5,6 +5,7 @@ Each function returns a layout for a specific dashboard page.
 import dash_bootstrap_components as dbc
 from dash import html, dcc
 from src.dashboard.styles import CONTAINER_STYLE, CARD_STYLE
+from src.config_manager import get_config
 
 
 def overview_layout():
@@ -14,15 +15,17 @@ def overview_layout():
     Returns:
         dbc.Container: Overview page layout with real-time data and charts
     """
+    config = get_config()
+
     return dbc.Container([
         # Page Title
         html.H1("Overview Dashboard", className="mb-4"),
         html.Hr(),
 
-        # Auto-refresh interval component (30 seconds)
+        # Auto-refresh interval component (from config)
         dcc.Interval(
             id="overview-interval",
-            interval=30000,  # 30 seconds in milliseconds
+            interval=config.dashboard.overview_refresh_ms,
             n_intervals=0
         ),
 
@@ -410,15 +413,17 @@ def config_layout():
     Returns:
         dbc.Container: Config page layout with controls and status
     """
+    config = get_config()
+
     return dbc.Container([
         # Page Title
         html.H1("Configuration & System Control", className="mb-4"),
         html.Hr(),
 
-        # Auto-refresh interval component (10 seconds)
+        # Auto-refresh interval component (from config)
         dcc.Interval(
             id="config-interval",
-            interval=10000,  # 10 seconds
+            interval=config.dashboard.config_refresh_ms,
             n_intervals=0
         ),
 

@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Optional
 
 from src.utils import format_bytes
+from src.config_manager import get_config
 
 
 class NetworkMonitorMenuBar(rumps.App):
@@ -19,15 +20,18 @@ class NetworkMonitorMenuBar(rumps.App):
             quit_button=None,  # Custom quit handler
         )
 
+        # Load configuration
+        self.config = get_config()
+
         # State
         self.daemon_running = False
         self.current_usage_bytes = 0
         self.today_total_bytes = 0
 
-        # High usage notification settings
-        self.high_usage_threshold_mb = 50  # 50 MB/s
+        # High usage notification settings (from config)
+        self.high_usage_threshold_mb = self.config.menubar.high_usage_threshold_mb
         self.last_notification_time = None
-        self.notification_cooldown_seconds = 300  # 5 minutes
+        self.notification_cooldown_seconds = self.config.menubar.notification_cooldown_seconds
 
         # Build menu
         self.menu = [
@@ -45,8 +49,11 @@ class NetworkMonitorMenuBar(rumps.App):
             rumps.MenuItem("Quit Network Monitor", callback=self.quit_app),
         ]
 
-        # Start background timer for auto-refresh
-        self.timer = rumps.Timer(self.update_stats, 30)  # Every 30 seconds
+        # Start background timer for auto-refresh (from config)
+        self.timer = rumps.Timer(
+            self.update_stats,
+            self.config.menubar.refresh_interval_seconds
+        )
         self.timer.start()
 
         # Initial update
@@ -55,8 +62,10 @@ class NetworkMonitorMenuBar(rumps.App):
     def update_stats(self, sender):
         """Update menu bar stats from API."""
         try:
-            # Fetch stats from API
-            response = requests.get("http://localhost:7500/api/stats", timeout=3)
+            # Fetch stats from API (using config for port and timeout)
+            port = self.config.server.port
+            timeout = self.config.api.default_timeout_seconds
+            response = requests.get(f"http://localhost:{port}/api/stats", timeout=timeout)
             data = response.json()
 
             # Update state
@@ -98,7 +107,9 @@ class NetworkMonitorMenuBar(rumps.App):
     def check_daemon_status(self):
         """Check if daemon is running."""
         try:
-            response = requests.get("http://localhost:7500/api/config/daemon/status", timeout=3)
+            port = self.config.server.port
+            timeout = self.config.api.default_timeout_seconds
+            response = requests.get(f"http://localhost:{port}/api/config/daemon/status", timeout=timeout)
             data = response.json()
             self.daemon_running = data.get("running", False)
 
@@ -134,7 +145,8 @@ class NetworkMonitorMenuBar(rumps.App):
 
     def open_dashboard(self, sender):
         """Open web dashboard in default browser."""
-        webbrowser.open("http://localhost:7500/dashboard/")
+        port = self.config.server.port
+        webbrowser.open(f"http://localhost:{port}/dashboard/")
 
     def refresh_stats(self, sender):
         """Manually refresh statistics."""
@@ -148,7 +160,9 @@ class NetworkMonitorMenuBar(rumps.App):
     def start_daemon(self, sender):
         """Start the network monitoring daemon."""
         try:
-            response = requests.post("http://localhost:7500/api/config/daemon/start", timeout=3)
+            port = self.config.server.port
+            timeout = self.config.api.default_timeout_seconds
+            response = requests.post(f"http://localhost:{port}/api/config/daemon/start", timeout=timeout)
             if response.status_code == 200:
                 rumps.notification(
                     title="Network Monitor",
@@ -172,7 +186,9 @@ class NetworkMonitorMenuBar(rumps.App):
     def stop_daemon(self, sender):
         """Stop the network monitoring daemon."""
         try:
-            response = requests.post("http://localhost:7500/api/config/daemon/stop", timeout=3)
+            port = self.config.server.port
+            timeout = self.config.api.default_timeout_seconds
+            response = requests.post(f"http://localhost:{port}/api/config/daemon/stop", timeout=timeout)
             if response.status_code == 200:
                 rumps.notification(
                     title="Network Monitor",

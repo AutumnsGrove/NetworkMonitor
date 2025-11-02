@@ -99,12 +99,13 @@ async def root():
 
 
 # Import and include API routers
-from src.api import stats, applications, domains, browser, config as config_routes
+from src.api import stats, applications, domains, browser, historical, config as config_routes
 
 app.include_router(stats.router, prefix="/api", tags=["stats"])
 app.include_router(applications.router, prefix="/api", tags=["applications"])
 app.include_router(domains.router, prefix="/api", tags=["domains"])
 app.include_router(browser.router, prefix="/api", tags=["browser"])
+app.include_router(historical.router, prefix="/api", tags=["historical"])
 app.include_router(config_routes.router, prefix="/api", tags=["config"])
 
 

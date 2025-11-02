@@ -15,8 +15,11 @@ from pathlib import Path
 # Setup logging first
 from src.logging_config import setup_logging
 
+# Import configuration
+from src.config_manager import get_config, get_config_manager
+
 # Import components
-from src.daemon import NetworkDaemon
+from src.daemon import NetworkDaemon, set_daemon
 from src.menubar import NetworkMonitorMenuBar
 from src.db_queries import init_database
 from src.retention import RetentionScheduler
@@ -30,15 +33,19 @@ logger = None
 class NetworkMonitorApp:
     """Main application orchestrator."""
 
-    def __init__(self, debug=False, no_menubar=False, port=7500):
+    def __init__(self, debug=False, no_menubar=False, port=None):
         """Initialize the Network Monitor application."""
         global logger
+
+        # Load configuration
+        self.config = get_config()
+
         logger = setup_logging(debug=debug, log_to_console=True)
         logger.info("=== Network Monitor Starting ===")
 
         self.debug = debug
         self.no_menubar = no_menubar
-        self.port = port
+        self.port = port if port is not None else self.config.server.port
 
         # Component references
         self.daemon = None
@@ -91,8 +98,13 @@ class NetworkMonitorApp:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
 
-            # Initialize daemon
-            self.daemon = NetworkDaemon(sampling_interval=5)
+            # Initialize daemon with config
+            self.daemon = NetworkDaemon(
+                sampling_interval=self.config.daemon.sampling_interval_seconds
+            )
+
+            # Register daemon globally for API access
+            set_daemon(self.daemon)
 
             # Run daemon until shutdown
             async def run_daemon():
@@ -119,8 +131,11 @@ class NetworkMonitorApp:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
 
-            # Initialize scheduler
-            self.scheduler = RetentionScheduler()
+            # Initialize scheduler with config
+            self.scheduler = RetentionScheduler(
+                aggregation_interval_seconds=self.config.retention.aggregation_interval_seconds,
+                cleanup_interval_seconds=self.config.retention.cleanup_interval_seconds
+            )
 
             # Run scheduler until shutdown
             async def run_scheduler():
@@ -247,8 +262,8 @@ def main():
     parser.add_argument(
         "--port",
         type=int,
-        default=7500,
-        help="Web server port (default: 7500)"
+        default=None,
+        help="Web server port (default: from config file)"
     )
 
     args = parser.parse_args()

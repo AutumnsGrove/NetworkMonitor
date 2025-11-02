@@ -19,7 +19,45 @@ Wait 5-10 seconds for everything to initialize.
 
 ---
 
-## ✅ Step 2: Verify Daemon is Running
+## ⚙️ Step 2: Configuration File
+
+### Config File Location
+All configuration is stored in `~/.netmonitor/config.yaml`
+
+### View Current Configuration:
+```bash
+cat ~/.netmonitor/config.yaml
+```
+
+### Test Config API:
+```bash
+# Get all config values with sources (file/database/default)
+curl http://localhost:7500/api/config/all
+```
+
+### Customize Settings
+Edit `~/.netmonitor/config.yaml` to change:
+- **Sampling interval:** How often network is sampled (default: 1 second)
+- **Port:** Web server port (default: 7500)
+- **Retention policies:** How long to keep raw/aggregated data
+- **MenuBar thresholds:** High usage alerts (default: 50 MB/s)
+- **Refresh intervals:** Dashboard auto-refresh rates
+- **Timeouts:** API and subprocess timeouts
+
+**Example:**
+```yaml
+daemon:
+  sampling_interval_seconds: 2  # Change from 1s to 2s
+
+server:
+  port: 8080  # Change from 7500 to 8080
+```
+
+**Restart required after config changes.**
+
+---
+
+## ✅ Step 3: Verify Daemon is Running
 
 ### Check via API:
 ```bash
@@ -52,17 +90,17 @@ INFO - Starting sampling loop
 
 ---
 
-## 📊 Step 3: Wait for Data Collection
+## 📊 Step 4: Wait for Data Collection
 
-The daemon samples every **5 seconds**. You need to:
+The daemon samples every **1 second**. You need to:
 
 1. **Browse the web** or use some apps (Slack, Discord, etc.)
-2. **Wait 30-60 seconds** for data to accumulate
-3. **Refresh the dashboard**
+2. **Wait 10-30 seconds** for data to accumulate (sampling every 1s now!)
+3. **Refresh the dashboard** (or wait for auto-refresh)
 
 ---
 
-## 🌐 Step 4: Test Browser Extension (Optional)
+## 🌐 Step 5: Test Browser Extension (Optional)
 
 ### Check Extension Status:
 ```bash
@@ -100,7 +138,7 @@ curl -X POST http://localhost:7500/api/browser/active-tab \
 
 ---
 
-## 📈 Step 5: Verify Dashboard Data
+## 📈 Step 6: Verify Dashboard Data
 
 **Open dashboard:**
 ```bash
