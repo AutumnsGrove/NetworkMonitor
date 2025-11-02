@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Optional
 
 from src.db_queries import (
-    get_domain_usage_stats, get_domain, get_db
+    get_domain_usage_stats, get_domain, get_db_connection
 )
 from src.utils import format_bytes
 
@@ -192,7 +192,7 @@ async def get_domain_timeline(
         raise HTTPException(status_code=400, detail=f"Invalid period: {period}")
 
     # Query based on granularity
-    async with get_db() as db:
+    async with get_db_connection() as db:
         if granularity == "hourly":
             query = """
                 SELECT

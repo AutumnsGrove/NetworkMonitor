@@ -326,7 +326,7 @@ async def export_data(
         import csv
         from io import StringIO
         from datetime import datetime
-        from src.db_queries import get_db
+        from src.db_queries import get_db_connection
 
         # Validate format
         if format not in ["csv", "json"]:
@@ -357,7 +357,7 @@ async def export_data(
             where_clause = " WHERE " + " AND ".join(conditions)
 
         # Query data from hourly_aggregates (more manageable than raw samples)
-        async with get_db() as db:
+        async with get_db_connection() as db:
             query = f"""
                 SELECT
                     h.timestamp,
