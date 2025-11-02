@@ -3,11 +3,11 @@ Statistics API endpoints.
 
 Provides current and historical network usage statistics.
 """
-from fastapi import APIRouter, Query
-from datetime import datetime, timedelta
+from fastapi import APIRouter, Query, HTTPException
+from datetime import datetime, timedelta, date
 from typing import Optional
 
-from src.db_queries import get_quick_stats, get_samples_since
+from src.db_queries import get_quick_stats, get_samples_since, get_daily_summary
 from src.utils import get_time_ranges, format_bytes
 
 
@@ -99,30 +99,53 @@ async def get_timeline_stats(
 
 @router.get("/stats/summary")
 async def get_summary_stats(
-    since: Optional[str] = Query(None, description="Start date (ISO format)")
+    start_date: Optional[str] = Query(None, description="Start date (ISO format YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="End date (ISO format YYYY-MM-DD)")
 ):
     """
-    Get summary statistics.
+    Get summary statistics from daily_aggregates table.
 
     Args:
-        since: Optional start date for statistics
+        start_date: Optional start date (YYYY-MM-DD). Defaults to 30 days ago.
+        end_date: Optional end date (YYYY-MM-DD). Defaults to today.
 
     Returns:
-        Summary statistics
+        Summary statistics including total, average, peak, and lowest daily usage
     """
-    since_dt = datetime.fromisoformat(since) if since else None
-    stats = await get_quick_stats()
+    # Default to last 30 days if not provided
+    if end_date:
+        try:
+            end_dt = date.fromisoformat(end_date)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid end_date format. Use YYYY-MM-DD")
+    else:
+        end_dt = date.today()
 
-    # Calculate totals
-    total_bytes = stats.total_bytes_today
-    avg_daily = total_bytes  # Simplified - would calculate from historical data
+    if start_date:
+        try:
+            start_dt = date.fromisoformat(start_date)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid start_date format. Use YYYY-MM-DD")
+    else:
+        start_dt = end_dt - timedelta(days=30)
+
+    # Validate date range
+    if start_dt > end_dt:
+        raise HTTPException(status_code=400, detail="start_date must be before or equal to end_date")
+
+    # Query database for real statistics
+    summary = await get_daily_summary(start_dt, end_dt)
 
     return {
-        "total_bytes": total_bytes,
-        "total_formatted": format_bytes(total_bytes),
-        "avg_daily_bytes": avg_daily,
-        "avg_daily_formatted": format_bytes(avg_daily),
-        "monitoring_since": stats.monitoring_since.isoformat() if stats.monitoring_since else None,
-        "top_application": stats.top_app_today,
-        "top_domain": stats.top_domain_today
+        "start_date": start_dt.isoformat(),
+        "end_date": end_dt.isoformat(),
+        "total_bytes": summary["total_bytes"],
+        "total_formatted": format_bytes(summary["total_bytes"]),
+        "avg_daily_bytes": summary["avg_daily_bytes"],
+        "avg_daily_formatted": format_bytes(summary["avg_daily_bytes"]),
+        "peak_daily_bytes": summary["peak_daily_bytes"],
+        "peak_daily_formatted": format_bytes(summary["peak_daily_bytes"]),
+        "lowest_daily_bytes": summary["lowest_daily_bytes"],
+        "lowest_daily_formatted": format_bytes(summary["lowest_daily_bytes"]),
+        "num_days": summary["num_days"]
     }

@@ -4,7 +4,7 @@ Handles all user interactions and real-time data updates for the dashboard.
 """
 import dash_bootstrap_components as dbc
 from dash import Input, Output, State, html
-from datetime import datetime
+from datetime import datetime, timedelta
 import plotly.graph_objs as go
 import requests
 
@@ -148,18 +148,35 @@ def update_gauge(n):
     Returns:
         Plotly gauge figure
     """
-    # For now, calculate bandwidth from recent samples
-    # In a real implementation, this would be calculated from the last 5 seconds of data
-    stats = fetch_api_data("/api/stats")
-
-    # Mock current bandwidth (you could enhance this with a dedicated endpoint)
-    # For now, estimate from recent activity
+    # Calculate real-time bandwidth from last 10 seconds of samples
     current_bandwidth_mbps = 0.0
 
-    if stats and stats.get("total_today", 0) > 0:
-        # Simple mock: assume some percentage of daily usage is current
-        # This is a placeholder - real implementation would use recent samples
-        current_bandwidth_mbps = 0.5  # Placeholder value
+    # Fetch recent timeline data (1h period to ensure we have recent samples)
+    timeline_response = fetch_api_data("/api/stats/timeline?period=1h")
+
+    if timeline_response and "timeline" in timeline_response:
+        timeline_data = timeline_response["timeline"]
+
+        if timeline_data:
+            # Filter to last 10 seconds
+            now = datetime.now()
+            cutoff_time = now - timedelta(seconds=10)
+
+            recent_samples = []
+            for sample in timeline_data:
+                try:
+                    sample_time = datetime.fromisoformat(sample.get("timestamp", ""))
+                    if sample_time >= cutoff_time:
+                        recent_samples.append(sample)
+                except (ValueError, TypeError):
+                    continue
+
+            # Calculate bandwidth if we have recent data
+            if recent_samples:
+                total_bytes = sum(sample.get("total_bytes", 0) for sample in recent_samples)
+                time_window_seconds = 10
+                bytes_per_second = total_bytes / time_window_seconds
+                current_bandwidth_mbps = bytes_per_second / (1024 * 1024)
 
     return create_gauge_chart(
         value=current_bandwidth_mbps,
@@ -637,13 +654,12 @@ def update_domains_table(browser, parent_only):
     # Format data for table display
     table_data = []
     for domain in domains_data:
-        # NOTE: Browser field may not be available in current API
         # Using domain_id as id since API returns domain_id
         table_data.append({
             "id": domain.get("domain_id", domain.get("id")),
             "domain": domain.get("domain", "Unknown"),
             "parent_domain": domain.get("parent_domain", "N/A"),
-            "browser": domain.get("browser", "Mixed"),  # TODO: API doesn't return browser yet
+            "browser": domain.get("browser", "Mixed"),
             "total_bytes": domain.get("total_bytes", 0),
             "total_bytes_formatted": format_bytes(domain.get("total_bytes", 0)),
             "last_seen": domain.get("last_seen", "N/A"),
@@ -742,11 +758,7 @@ def update_domain_timeline(selected_rows, table_data):
     selected_domain = table_data[selected_rows[0]]
     domain_name = selected_domain.get("domain", "Unknown")
 
-    # NOTE: Domain timeline endpoint may not exist yet
-    # For now, use mock data or /api/stats/timeline as fallback
-    # TODO: Implement GET /api/domains/{domain_id}/timeline endpoint
-
-    # Try to fetch timeline (this may fail if endpoint doesn't exist)
+    # Fetch timeline for selected domain
     domain_id = selected_domain.get("id")
     if domain_id:
         api_response = fetch_api_data(f"/api/domains/{domain_id}/timeline")
@@ -1041,24 +1053,22 @@ def update_summary_cards(start_date, end_date):
     # Calculate period duration
     period_days = (end - start).days + 1
 
-    # Real implementation would query database:
-    # SELECT
-    #   SUM(total_bytes) as total,
-    #   AVG(total_bytes) as avg_daily,
-    #   MAX(total_bytes) as peak,
-    #   MIN(total_bytes) as lowest
-    # FROM daily_aggregates
-    # WHERE date BETWEEN start_date AND end_date
+    # Fetch real summary statistics from API
+    start_str = start.isoformat()
+    end_str = end.isoformat()
+    api_response = fetch_api_data(f"/api/stats/summary?start_date={start_str}&end_date={end_str}")
 
-    # TODO: Replace with actual API call
-    # api_response = fetch_api_data(f"/api/stats/summary?start_date={start_date}&end_date={end_date}")
-
-    # Generate mock summary stats
-    import random
-    total_bytes = random.uniform(50_000_000_000, 200_000_000_000) * (period_days / 30)
-    avg_daily = total_bytes / period_days
-    peak_bytes = avg_daily * random.uniform(1.5, 2.5)
-    lowest_bytes = avg_daily * random.uniform(0.3, 0.6)
+    if api_response:
+        total_bytes = api_response.get("total_bytes", 0)
+        avg_daily = api_response.get("avg_daily_bytes", 0)
+        peak_bytes = api_response.get("peak_daily_bytes", 0)
+        lowest_bytes = api_response.get("lowest_daily_bytes", 0)
+    else:
+        # Fallback to zeros if API fails
+        total_bytes = 0
+        avg_daily = 0
+        peak_bytes = 0
+        lowest_bytes = 0
 
     # Create stat cards
     cards = [

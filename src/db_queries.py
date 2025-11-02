@@ -636,3 +636,57 @@ async def insert_active_tab(tab: ActiveTab) -> int:
         )
         await conn.commit()
         return cursor.lastrowid
+
+
+async def get_daily_summary(start_date: date, end_date: date) -> Dict[str, Any]:
+    """
+    Get summary statistics from daily_aggregates table for the given date range.
+
+    Args:
+        start_date: Start date (inclusive)
+        end_date: End date (inclusive)
+
+    Returns:
+        Dictionary with total_bytes, avg_daily_bytes, peak_daily_bytes,
+        lowest_daily_bytes, and num_days
+    """
+    async with get_db_connection() as conn:
+        # Get daily totals for the range
+        cursor = await conn.execute(
+            """
+            SELECT
+                day_start,
+                SUM(bytes_sent + bytes_received) as daily_total
+            FROM daily_aggregates
+            WHERE day_start >= ? AND day_start <= ?
+            GROUP BY day_start
+            ORDER BY day_start
+            """,
+            (start_date, end_date)
+        )
+        rows = await cursor.fetchall()
+
+        # Calculate statistics
+        if not rows:
+            return {
+                "total_bytes": 0,
+                "avg_daily_bytes": 0,
+                "peak_daily_bytes": 0,
+                "lowest_daily_bytes": 0,
+                "num_days": 0
+            }
+
+        daily_totals = [row[1] for row in rows]
+        total_bytes = sum(daily_totals)
+        num_days = len(daily_totals)
+        avg_daily_bytes = total_bytes // num_days if num_days > 0 else 0
+        peak_daily_bytes = max(daily_totals)
+        lowest_daily_bytes = min(daily_totals)
+
+        return {
+            "total_bytes": total_bytes,
+            "avg_daily_bytes": avg_daily_bytes,
+            "peak_daily_bytes": peak_daily_bytes,
+            "lowest_daily_bytes": lowest_daily_bytes,
+            "num_days": num_days
+        }
