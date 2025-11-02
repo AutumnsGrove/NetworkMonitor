@@ -473,9 +473,9 @@ async def get_domain_usage_stats(since: Optional[datetime] = None, limit: int = 
                 d.domain_id,
                 d.domain,
                 d.parent_domain,
-                SUM(bds.bytes_sent) as total_bytes_sent,
-                SUM(bds.bytes_received) as total_bytes_received,
-                SUM(bds.bytes_sent + bds.bytes_received) as total_bytes,
+                COALESCE(SUM(bds.bytes_sent), 0) as total_bytes_sent,
+                COALESCE(SUM(bds.bytes_received), 0) as total_bytes_received,
+                COALESCE(SUM(bds.bytes_sent + bds.bytes_received), 0) as total_bytes,
                 d.first_seen,
                 d.last_seen
             FROM domains d
