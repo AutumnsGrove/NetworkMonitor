@@ -356,21 +356,24 @@ async def export_data(
 
             where_clause = " WHERE " + " AND ".join(conditions)
 
-        # Query data from hourly_aggregates (more manageable than raw samples)
+        # Query data from browser_domain_hourly (includes both app and domain info)
         async with get_db_connection() as db:
+            # Adjust where clause to use hour_start instead of timestamp
+            adjusted_where = where_clause.replace("timestamp", "h.hour_start") if where_clause else ""
+
             query = f"""
                 SELECT
-                    h.timestamp,
-                    a.name as application,
+                    h.hour_start as timestamp,
+                    a.process_name as application,
                     d.domain,
                     h.bytes_sent,
                     h.bytes_received,
                     (h.bytes_sent + h.bytes_received) as total_bytes
-                FROM hourly_aggregates h
-                LEFT JOIN applications a ON h.app_id = a.id
-                LEFT JOIN domains d ON h.domain_id = d.id
-                {where_clause}
-                ORDER BY h.timestamp DESC
+                FROM browser_domain_hourly h
+                LEFT JOIN applications a ON h.app_id = a.app_id
+                LEFT JOIN domains d ON h.domain_id = d.domain_id
+                {adjusted_where}
+                ORDER BY h.hour_start DESC
                 LIMIT 10000
             """
 
