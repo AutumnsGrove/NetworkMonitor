@@ -65,19 +65,7 @@ class NetworkDaemon:
         self.samples_collected = 0
         self.errors_count = 0
 
-        # Shutdown handling
-        self._setup_signal_handlers()
-
         logger.info(f"Initialized NetworkDaemon (interval: {sampling_interval}s)")
-
-    def _setup_signal_handlers(self) -> None:
-        """Setup signal handlers for graceful shutdown."""
-        def signal_handler(sig, frame):
-            logger.info(f"Received signal {sig}, initiating shutdown...")
-            asyncio.create_task(self.stop())
-
-        signal.signal(signal.SIGTERM, signal_handler)
-        signal.signal(signal.SIGINT, signal_handler)
 
     async def start(self) -> None:
         """Start the daemon."""
