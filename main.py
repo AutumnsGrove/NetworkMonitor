@@ -151,7 +151,7 @@ class NetworkMonitorApp:
         logger.info(f"Database: {db_path}")
 
         try:
-            asyncio.run(init_database())
+            init_database()
             logger.info("Database initialized")
         except Exception as e:
             logger.error(f"Database initialization failed: {e}")
